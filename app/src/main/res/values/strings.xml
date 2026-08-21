@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">TechFix</string>
+    <string name="tagline">Computer &amp; mobile repair, made simple</string>
+    <string name="google_maps_key">YOUR_GOOGLE_MAPS_API_KEY</string>
+    <string-array name="payment_methods">
+        <item>CASH</item>
+        <item>CARD</item>
+    </string-array>
+    <string-array name="appointment_statuses">
+        <item>PENDING</item>
+        <item>ASSIGNED</item>
+        <item>IN_PROGRESS</item>
+        <item>COMPLETED</item>
+        <item>CANCELLED</item>
+    </string-array>
+</resources>

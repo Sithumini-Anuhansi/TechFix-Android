@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="primary">#0D7377</color>
+    <color name="primary_dark">#0A5C5F</color>
+    <color name="accent">#14919B</color>
+    <color name="background">#F4F7F7</color>
+    <color name="surface">#FFFFFF</color>
+    <color name="text_primary">#1A1A1A</color>
+    <color name="text_secondary">#5F6B6B</color>
+    <color name="white">#FFFFFF</color>
+    <color name="error">#C62828</color>
+    <color name="success">#2E7D32</color>
+    <color name="warning">#EF6C00</color>
+    <color name="chip_pending">#EF6C00</color>
+    <color name="chip_assigned">#1565C0</color>
+    <color name="chip_progress">#6A1B9A</color>
+    <color name="chip_done">#2E7D32</color>
+    <color name="chip_cancel">#C62828</color>
+    <color name="launcher_bg">#0D7377</color>
+</resources>
