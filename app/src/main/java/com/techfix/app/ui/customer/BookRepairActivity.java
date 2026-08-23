@@ -61,7 +61,7 @@ public class BookRepairActivity extends AppCompatActivity {
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_book_repair);
-        UiHelper.setupToolbar(this, "Book repair", true);
+        UiHelper.setupToolbar(this, getString(R.string.title_book_repair), true);
 
         dao = new TechFixDao(this);
         long serviceId = getIntent().getLongExtra("serviceId", 0);
@@ -71,7 +71,7 @@ public class BookRepairActivity extends AppCompatActivity {
             return;
         }
 
-        ((TextView) findViewById(R.id.txtService)).setText(service.name + " — " + UiHelper.money(service.price));
+        ((TextView) findViewById(R.id.txtService)).setText(getString(R.string.label_service_info, service.name, UiHelper.money(this, service.price)));
         eligible = dao.getEligibleBranches(service.categoryId);
         populateBranches();
 
@@ -96,30 +96,27 @@ public class BookRepairActivity extends AppCompatActivity {
                     TextView hint = findViewById(R.id.txtAssignHint);
                     if (nearest != null) {
                         double km = LocationHelper.haversineKm(latitude, longitude, nearest.latitude, nearest.longitude);
-                        hint.setText(String.format(Locale.US,
-                                "GPS ready. Nearest eligible branch: %s (%.1f km)", nearest.name, km));
+                        hint.setText(getString(R.string.hint_gps_ready, nearest.name, km));
                     } else {
-                        hint.setText("GPS ready. No eligible branch found for this category.");
+                        hint.setText(getString(R.string.hint_gps_no_branch));
                     }
                 }
 
                 @Override
                 public void onUnavailable() {
-                    ((TextView) findViewById(R.id.txtAssignHint)).setText(
-                            "Location unavailable. Choose a branch below.");
+                    ((TextView) findViewById(R.id.txtAssignHint)).setText(R.string.hint_location_unavailable);
                 }
             });
         } else {
-            ((TextView) findViewById(R.id.txtAssignHint)).setText(
-                    "Location permission denied. Choose a branch below.");
+            ((TextView) findViewById(R.id.txtAssignHint)).setText(R.string.hint_location_denied);
         }
     }
 
     private void populateBranches() {
         List<String> labels = new ArrayList<>();
-        labels.add("Auto — nearest branch with GPS");
+        labels.add(getString(R.string.label_auto_branch));
         for (Branch b : eligible) {
-            labels.add(b.name + " (" + b.city + ")");
+            labels.add(getString(R.string.label_branch_city, b.name, b.city));
         }
         Spinner spinner = findViewById(R.id.spinnerBranch);
         ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, labels);
@@ -129,7 +126,7 @@ public class BookRepairActivity extends AppCompatActivity {
     private void takePhoto() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
                 != android.content.pm.PackageManager.PERMISSION_GRANTED) {
-            Toast.makeText(this, "Camera permission is required", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, R.string.msg_camera_permission, Toast.LENGTH_SHORT).show();
             permissionLauncher.launch(new String[]{Manifest.permission.CAMERA});
             return;
         }
@@ -137,7 +134,7 @@ public class BookRepairActivity extends AppCompatActivity {
             photoFile = ImageHelper.createImageFile(this);
             cameraLauncher.launch(ImageHelper.uriFor(this, photoFile));
         } catch (IOException e) {
-            Toast.makeText(this, "Could not open camera", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, R.string.msg_camera_error, Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -145,11 +142,11 @@ public class BookRepairActivity extends AppCompatActivity {
         TextInputEditText noteInput = findViewById(R.id.inputNote);
         String note = noteInput.getText() == null ? "" : noteInput.getText().toString().trim();
         if (note.isEmpty()) {
-            Toast.makeText(this, "Describe the device and issue", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, R.string.msg_describe_issue, Toast.LENGTH_SHORT).show();
             return;
         }
         if (eligible.isEmpty()) {
-            Toast.makeText(this, "No branch currently has a technician and parts for this service", Toast.LENGTH_LONG).show();
+            Toast.makeText(this, R.string.msg_no_eligible_branch, Toast.LENGTH_LONG).show();
             return;
         }
 
@@ -161,21 +158,22 @@ public class BookRepairActivity extends AppCompatActivity {
 
         BranchAssigner.Result result = BranchAssigner.assign(dao, service.categoryId, lat, lng, manualId);
         if (result == null) {
-            Toast.makeText(this, "No branches available for this service", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, R.string.msg_no_branch_available, Toast.LENGTH_SHORT).show();
             return;
         }
 
         String created = new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(new Date());
         long customerId = new SessionManager(this).getUserId();
-        // Set technician to 0 (Unassigned) and status to PENDING
-        long appointmentId = dao.insertAppointment(customerId, result.branch.id, 0,
-                service.id, note, "PENDING", created);
+        
+        // Use result.technician.id if available from Auto-Assign, otherwise 0
+        long techId = result.technician != null ? result.technician.id : 0;
+        String status = techId > 0 ? "IN_PROGRESS" : "PENDING";
+        String photoPath = (photoFile != null && photoFile.exists()) ? photoFile.getAbsolutePath() : "";
+        
+        long appointmentId = dao.insertAppointment(customerId, result.branch.id, techId,
+                service.id, "Device", note, photoPath, status, created);
 
-        if (photoFile != null && photoFile.exists()) {
-            dao.addRepairImage(appointmentId, photoFile.getAbsolutePath(), "Customer device photo");
-        }
-
-        Toast.makeText(this, "Repair request sent to " + result.branch.name + ". Waiting for assignment.", Toast.LENGTH_LONG).show();
+        Toast.makeText(this, getString(R.string.msg_repair_booked, result.branch.name), Toast.LENGTH_LONG).show();
         startActivity(new Intent(this, MyAppointmentsActivity.class));
         finish();
     }

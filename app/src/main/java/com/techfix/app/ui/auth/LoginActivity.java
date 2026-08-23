@@ -13,6 +13,7 @@ import com.techfix.app.R;
 import com.techfix.app.data.TechFixDao;
 import com.techfix.app.model.User;
 import com.techfix.app.ui.customer.CustomerHomeActivity;
+import com.techfix.app.ui.manager.BranchManagerDashboardActivity;
 import com.techfix.app.ui.staff.StaffDashboardActivity;
 import com.techfix.app.util.SessionManager;
 
@@ -56,6 +57,8 @@ public class LoginActivity extends AppCompatActivity {
             new SessionManager(this).save(user);
             if ("ADMIN".equals(user.role)) {
                 startActivity(new Intent(this, com.techfix.app.ui.admin.AdminDashboardActivity.class));
+            } else if ("MANAGER".equals(user.role)) {
+                startActivity(new Intent(this, BranchManagerDashboardActivity.class));
             } else if ("STAFF".equals(user.role)) {
                 startActivity(new Intent(this, StaffDashboardActivity.class));
             } else {

@@ -6,7 +6,9 @@ public class Appointment {
     public long branchId;
     public long technicianId;
     public long serviceId;
-    public String deviceNote;
+    public String deviceName;
+    public String issueDescription;
+    public String devicePhoto;
     public String status;
     public String createdAt;
     public String customerName;
@@ -14,7 +16,7 @@ public class Appointment {
     public String technicianName;
     public String serviceName;
     public double servicePrice;
-    public int paid;
+    public String paymentStatus;
 
     public Appointment() {}
 }

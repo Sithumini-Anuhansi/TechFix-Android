@@ -13,11 +13,13 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.Nullable;
+import androidx.annotation.OptIn;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.google.android.material.badge.ExperimentalBadgeUtils;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.techfix.app.R;
 import com.techfix.app.data.TechFixDao;
@@ -29,6 +31,7 @@ import com.techfix.app.ui.UiHelper;
 import java.util.ArrayList;
 import java.util.List;
 
+@OptIn(markerClass = ExperimentalBadgeUtils.class)
 public class AdminStaffActivity extends AppCompatActivity {
     private TechFixDao dao;
     private SimpleAdapter<User> adapter;
@@ -39,7 +42,7 @@ public class AdminStaffActivity extends AppCompatActivity {
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_list);
-        UiHelper.setupToolbar(this, "Manage Staff", true);
+        UiHelper.setupToolbar(this, getString(R.string.title_manage_staff), true);
 
         dao = new TechFixDao(this);
         branches = dao.getBranches();
@@ -49,7 +52,7 @@ public class AdminStaffActivity extends AppCompatActivity {
         Spinner spinnerFilter = findViewById(R.id.spinnerFilter);
 
         List<String> branchNames = new ArrayList<>();
-        branchNames.add("All Branches");
+        branchNames.add(getString(R.string.all_branches));
         for (Branch b : branches) branchNames.add(b.name);
         ArrayAdapter<String> spinAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, branchNames);
         spinnerFilter.setAdapter(spinAdapter);
@@ -80,7 +83,7 @@ public class AdminStaffActivity extends AppCompatActivity {
 
         adapter = new SimpleAdapter<>((item, image, title, subtitle, meta) -> {
             title.setText(item.name);
-            subtitle.setText(item.email + " · " + item.phone);
+            subtitle.setText(getString(R.string.label_history_meta, item.email, item.phone));
             meta.setText(item.role + (item.branchName != null ? " (" + item.branchName + ")" : ""));
         }, this::showOptions);
 
@@ -104,7 +107,7 @@ public class AdminStaffActivity extends AppCompatActivity {
         List<User> filtered = new ArrayList<>();
         for (User u : allStaff) {
             boolean matchesQuery = u.name.toLowerCase().contains(query) || u.email.toLowerCase().contains(query);
-            boolean matchesBranch = branch.equals("All Branches") || (u.branchName != null && u.branchName.equals(branch));
+            boolean matchesBranch = branch.equals(getString(R.string.all_branches)) || (u.branchName != null && u.branchName.equals(branch));
 
             if (matchesQuery && matchesBranch) {
                 filtered.add(u);
@@ -122,48 +125,49 @@ public class AdminStaffActivity extends AppCompatActivity {
         EditText pass = view.findViewById(R.id.inputPassword);
         EditText phone = view.findViewById(R.id.inputPhone);
         Spinner spinBranch = view.findViewById(R.id.spinBranch);
+        Spinner spinRole = view.findViewById(R.id.spinRole);
+
+        String[] roles = {"STAFF", "MANAGER"};
+        ArrayAdapter<String> roleAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, roles);
+        roleAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinRole.setAdapter(roleAdapter);
 
         ArrayAdapter<Branch> branchAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, branches);
         branchAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         spinBranch.setAdapter(branchAdapter);
 
         new AlertDialog.Builder(this)
-                .setTitle("Add New Staff")
+                .setTitle(R.string.dialog_add_staff)
                 .setView(view)
-                .setPositiveButton("Add", (dialog, which) -> {
+                .setPositiveButton(R.string.action_add, (dialog, which) -> {
                     String n = name.getText().toString();
                     String e = email.getText().toString();
                     String p = pass.getText().toString();
                     String ph = phone.getText().toString();
+                    String r = spinRole.getSelectedItem().toString();
                     Branch b = (Branch) spinBranch.getSelectedItem();
                     if (n.isEmpty() || e.isEmpty() || p.isEmpty() || b == null) {
-                        Toast.makeText(this, "Fill required fields", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(this, R.string.msg_fill_fields, Toast.LENGTH_SHORT).show();
                         return;
                     }
-                    dao.addUser(n, e, p, ph, "STAFF", b.id);
+                    dao.addUser(n, e, p, ph, r, b.id);
                     load();
-                    Toast.makeText(this, "Staff added", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, R.string.msg_staff_added, Toast.LENGTH_SHORT).show();
                 })
-                .setNegativeButton("Cancel", null)
+                .setNegativeButton(R.string.action_cancel, null)
                 .show();
-    }
-
-    private void load() {
-        List<User> list = dao.getStaff();
-        adapter.submit(list);
-        findViewById(R.id.txtEmpty).setVisibility(list.isEmpty() ? View.VISIBLE : View.GONE);
     }
 
     private void showOptions(User user) {
         new AlertDialog.Builder(this)
                 .setTitle(user.name)
-                .setItems(new String[]{"Update", "Delete"}, (dialog, which) -> {
+                .setItems(new String[]{getString(R.string.action_update), getString(R.string.action_delete)}, (dialog, which) -> {
                     if (which == 0) {
                         showUpdateDialog(user);
                     } else if (which == 1) {
                         dao.deleteUser(user.id);
                         load();
-                        Toast.makeText(this, "Staff deleted", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(this, R.string.msg_staff_deleted, Toast.LENGTH_SHORT).show();
                     }
                 })
                 .show();
@@ -176,6 +180,7 @@ public class AdminStaffActivity extends AppCompatActivity {
         EditText pass = view.findViewById(R.id.inputPassword);
         EditText phone = view.findViewById(R.id.inputPhone);
         Spinner spinBranch = view.findViewById(R.id.spinBranch);
+        Spinner spinRole = view.findViewById(R.id.spinRole);
 
         // Hide password for update
         view.findViewById(R.id.layoutPassword).setVisibility(View.GONE);
@@ -183,6 +188,17 @@ public class AdminStaffActivity extends AppCompatActivity {
         name.setText(user.name);
         email.setText(user.email);
         phone.setText(user.phone);
+
+        String[] roles = {"STAFF", "MANAGER"};
+        ArrayAdapter<String> roleAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, roles);
+        roleAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinRole.setAdapter(roleAdapter);
+        for (int i = 0; i < roles.length; i++) {
+            if (roles[i].equals(user.role)) {
+                spinRole.setSelection(i);
+                break;
+            }
+        }
 
         ArrayAdapter<Branch> branchAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, branches);
         branchAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
@@ -195,22 +211,23 @@ public class AdminStaffActivity extends AppCompatActivity {
         }
 
         new AlertDialog.Builder(this)
-                .setTitle("Update Staff")
+                .setTitle(R.string.dialog_update_staff)
                 .setView(view)
-                .setPositiveButton("Update", (dialog, which) -> {
+                .setPositiveButton(R.string.action_update, (dialog, which) -> {
                     String n = name.getText().toString();
                     String e = email.getText().toString();
                     String ph = phone.getText().toString();
+                    String r = spinRole.getSelectedItem().toString();
                     Branch b = (Branch) spinBranch.getSelectedItem();
                     if (n.isEmpty() || e.isEmpty() || b == null) {
-                        Toast.makeText(this, "Fill required fields", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(this, R.string.msg_fill_fields, Toast.LENGTH_SHORT).show();
                         return;
                     }
-                    dao.updateUser(user.id, n, e, ph, user.role, b.id);
+                    dao.updateUser(user.id, n, e, ph, r, b.id);
                     load();
-                    Toast.makeText(this, "Staff updated", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, R.string.msg_staff_updated, Toast.LENGTH_SHORT).show();
                 })
-                .setNegativeButton("Cancel", null)
+                .setNegativeButton(R.string.action_cancel, null)
                 .show();
     }
 }

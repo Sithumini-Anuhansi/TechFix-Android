@@ -9,19 +9,25 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.Nullable;
+import androidx.annotation.OptIn;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.google.android.material.badge.ExperimentalBadgeUtils;
 import com.techfix.app.R;
 import com.techfix.app.data.TechFixDao;
 import com.techfix.app.model.Branch;
 import com.techfix.app.ui.SimpleAdapter;
 import com.techfix.app.ui.UiHelper;
+import com.techfix.app.ui.staff.StaffAppointmentsActivity;
+import com.techfix.app.ui.staff.StaffPartsActivity;
+import com.techfix.app.ui.staff.StaffPaymentsActivity;
 
 import java.util.List;
 
+@OptIn(markerClass = ExperimentalBadgeUtils.class)
 public class AdminBranchesActivity extends AppCompatActivity {
     private TechFixDao dao;
     private SimpleAdapter<Branch> adapter;
@@ -30,7 +36,7 @@ public class AdminBranchesActivity extends AppCompatActivity {
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_list);
-        UiHelper.setupToolbar(this, "Manage Branches", true);
+        UiHelper.setupToolbar(this, getString(R.string.title_manage_branches), true);
         findViewById(R.id.searchLayout).setVisibility(View.GONE);
 
         dao = new TechFixDao(this);
@@ -40,7 +46,7 @@ public class AdminBranchesActivity extends AppCompatActivity {
         adapter = new SimpleAdapter<>((item, image, title, subtitle, meta) -> {
             title.setText(item.name);
             subtitle.setText(item.address);
-            meta.setText(String.format("%s · %s", item.city, item.phone));
+            meta.setText(getString(R.string.label_history_meta, item.city, item.phone));
         }, this::showOptions);
 
         recycler.setAdapter(adapter);
@@ -60,9 +66,9 @@ public class AdminBranchesActivity extends AppCompatActivity {
         EditText lng = view.findViewById(R.id.inputLng);
 
         new AlertDialog.Builder(this)
-                .setTitle("Add New Branch")
+                .setTitle(R.string.dialog_add_branch)
                 .setView(view)
-                .setPositiveButton("Add", (dialog, which) -> {
+                .setPositiveButton(R.string.action_add, (dialog, which) -> {
                     String n = name.getText().toString();
                     String a = addr.getText().toString();
                     String c = city.getText().toString();
@@ -74,14 +80,14 @@ public class AdminBranchesActivity extends AppCompatActivity {
                     } catch (Exception ignored) {}
 
                     if (n.isEmpty() || a.isEmpty() || c.isEmpty()) {
-                        Toast.makeText(this, "Fill required fields", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(this, R.string.msg_fill_fields, Toast.LENGTH_SHORT).show();
                         return;
                     }
                     dao.addBranch(n, a, c, la, ln, p);
                     load();
-                    Toast.makeText(this, "Branch added", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, R.string.msg_branch_added, Toast.LENGTH_SHORT).show();
                 })
-                .setNegativeButton("Cancel", null)
+                .setNegativeButton(R.string.action_cancel, null)
                 .show();
     }
 
@@ -94,7 +100,14 @@ public class AdminBranchesActivity extends AppCompatActivity {
     private void showOptions(Branch branch) {
         new AlertDialog.Builder(this)
                 .setTitle(branch.name)
-                .setItems(new String[]{"View Staff", "View Spare Parts", "Update", "Delete"}, (dialog, which) -> {
+                .setItems(new String[]{
+                        getString(R.string.action_view_staff),
+                        getString(R.string.action_view_spare_parts),
+                        getString(R.string.action_view_repairs),
+                        getString(R.string.action_view_payments),
+                        getString(R.string.action_update),
+                        getString(R.string.action_delete)
+                }, (dialog, which) -> {
                     if (which == 0) {
                         Intent intent = new Intent(this, AdminStaffActivity.class);
                         intent.putExtra("filter_branch", branch.name);
@@ -104,11 +117,20 @@ public class AdminBranchesActivity extends AppCompatActivity {
                         intent.putExtra("filter_branch", branch.name);
                         startActivity(intent);
                     } else if (which == 2) {
-                        showUpdateDialog(branch);
+                        Intent intent = new Intent(this, StaffAppointmentsActivity.class);
+                        intent.putExtra("branch_id", branch.id);
+                        intent.putExtra("filter_status", "ALL");
+                        startActivity(intent);
                     } else if (which == 3) {
+                        Intent intent = new Intent(this, StaffPaymentsActivity.class);
+                        intent.putExtra("branch_id", branch.id);
+                        startActivity(intent);
+                    } else if (which == 4) {
+                        showUpdateDialog(branch);
+                    } else if (which == 5) {
                         dao.deleteBranch(branch.id);
                         load();
-                        Toast.makeText(this, "Branch deleted", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(this, R.string.msg_branch_deleted, Toast.LENGTH_SHORT).show();
                     }
                 })
                 .show();
@@ -131,9 +153,9 @@ public class AdminBranchesActivity extends AppCompatActivity {
         lng.setText(String.valueOf(branch.longitude));
 
         new AlertDialog.Builder(this)
-                .setTitle("Update Branch")
+                .setTitle(R.string.dialog_update_branch)
                 .setView(view)
-                .setPositiveButton("Update", (dialog, which) -> {
+                .setPositiveButton(R.string.action_update, (dialog, which) -> {
                     String n = name.getText().toString();
                     String a = addr.getText().toString();
                     String c = city.getText().toString();
@@ -145,14 +167,14 @@ public class AdminBranchesActivity extends AppCompatActivity {
                     } catch (Exception ignored) {}
 
                     if (n.isEmpty() || a.isEmpty() || c.isEmpty()) {
-                        Toast.makeText(this, "Fill required fields", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(this, R.string.msg_fill_fields, Toast.LENGTH_SHORT).show();
                         return;
                     }
                     dao.updateBranch(branch.id, n, a, c, la, ln, p);
                     load();
-                    Toast.makeText(this, "Branch updated", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, R.string.msg_branch_updated, Toast.LENGTH_SHORT).show();
                 })
-                .setNegativeButton("Cancel", null)
+                .setNegativeButton(R.string.action_cancel, null)
                 .show();
     }
 }

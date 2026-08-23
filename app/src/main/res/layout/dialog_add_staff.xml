@@ -56,6 +56,20 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
+        android:text="Employee Role"
+        android:textStyle="bold" />
+
+    <Spinner
+        android:id="@+id/spinRole"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:minHeight="48dp" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
         android:text="Assigned Branch"
         android:textStyle="bold" />
 

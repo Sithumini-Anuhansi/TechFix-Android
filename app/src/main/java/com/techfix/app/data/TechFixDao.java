@@ -8,6 +8,7 @@ import android.database.sqlite.SQLiteDatabase;
 import com.techfix.app.model.Appointment;
 import com.techfix.app.model.Branch;
 import com.techfix.app.model.Category;
+import com.techfix.app.model.Notification;
 import com.techfix.app.model.Payment;
 import com.techfix.app.model.RepairImage;
 import com.techfix.app.model.Service;
@@ -16,31 +17,33 @@ import com.techfix.app.model.Technician;
 import com.techfix.app.model.User;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 
 public class TechFixDao {
     private final DatabaseHelper helper;
 
     public TechFixDao(Context context) {
-        helper = new DatabaseHelper(context.getApplicationContext());
+        helper = new DatabaseHelper(context);
     }
 
     public User login(String email, String password) {
         SQLiteDatabase db = helper.getReadableDatabase();
-        Cursor c = db.rawQuery(
-                "SELECT * FROM users WHERE email = ? AND password = ? LIMIT 1",
-                new String[]{email.trim(), password});
-        User user = null;
+        Cursor c = db.rawQuery("SELECT * FROM users WHERE email = ? AND password = ?", new String[]{email, password});
         if (c.moveToFirst()) {
-            user = cursorToUser(c);
+            User u = cursorToUser(c);
+            c.close();
+            return u;
         }
         c.close();
-        return user;
+        return null;
     }
 
     public boolean emailExists(String email) {
         SQLiteDatabase db = helper.getReadableDatabase();
-        Cursor c = db.rawQuery("SELECT id FROM users WHERE email = ?", new String[]{email.trim()});
+        Cursor c = db.rawQuery("SELECT 1 FROM users WHERE email = ?", new String[]{email});
         boolean exists = c.moveToFirst();
         c.close();
         return exists;
@@ -50,7 +53,7 @@ public class TechFixDao {
         SQLiteDatabase db = helper.getWritableDatabase();
         ContentValues v = new ContentValues();
         v.put("name", name);
-        v.put("email", email.trim());
+        v.put("email", email);
         v.put("password", password);
         v.put("phone", phone);
         v.put("role", "CUSTOMER");
@@ -60,22 +63,25 @@ public class TechFixDao {
     public User getUser(long id) {
         SQLiteDatabase db = helper.getReadableDatabase();
         Cursor c = db.rawQuery("SELECT * FROM users WHERE id = ?", new String[]{String.valueOf(id)});
-        User user = null;
         if (c.moveToFirst()) {
-            user = cursorToUser(c);
+            User u = cursorToUser(c);
+            c.close();
+            return u;
         }
         c.close();
-        return user;
+        return null;
     }
 
     public List<Category> getCategories() {
         List<Category> list = new ArrayList<>();
         SQLiteDatabase db = helper.getReadableDatabase();
-        Cursor c = db.rawQuery("SELECT * FROM categories ORDER BY name", null);
+        Cursor c = db.rawQuery("SELECT * FROM categories", null);
         while (c.moveToNext()) {
-            list.add(new Category(c.getLong(c.getColumnIndexOrThrow("id")),
-                    c.getString(c.getColumnIndexOrThrow("name")),
-                    c.getString(c.getColumnIndexOrThrow("description"))));
+            Category cat = new Category();
+            cat.id = c.getLong(c.getColumnIndexOrThrow("id"));
+            cat.name = c.getString(c.getColumnIndexOrThrow("name"));
+            cat.description = c.getString(c.getColumnIndexOrThrow("description"));
+            list.add(cat);
         }
         c.close();
         return list;
@@ -84,13 +90,10 @@ public class TechFixDao {
     public List<Service> searchServices(String query) {
         List<Service> list = new ArrayList<>();
         SQLiteDatabase db = helper.getReadableDatabase();
-        String q = "%" + (query == null ? "" : query.trim()) + "%";
-        Cursor c = db.rawQuery(
-                "SELECT s.*, cat.name AS category_name FROM services s "
-                        + "JOIN categories cat ON cat.id = s.category_id "
-                        + "WHERE s.name LIKE ? OR s.description LIKE ? OR cat.name LIKE ? "
-                        + "ORDER BY cat.name, s.name",
-                new String[]{q, q, q});
+        String q = "%" + (query == null ? "" : query) + "%";
+        Cursor c = db.rawQuery("SELECT s.*, c.name AS category_name FROM services s " +
+                "JOIN categories c ON c.id = s.category_id " +
+                "WHERE s.name LIKE ? OR c.name LIKE ?", new String[]{q, q});
         while (c.moveToNext()) {
             list.add(cursorToService(c));
         }
@@ -100,22 +103,21 @@ public class TechFixDao {
 
     public Service getService(long id) {
         SQLiteDatabase db = helper.getReadableDatabase();
-        Cursor c = db.rawQuery(
-                "SELECT s.*, cat.name AS category_name FROM services s "
-                        + "JOIN categories cat ON cat.id = s.category_id WHERE s.id = ?",
-                new String[]{String.valueOf(id)});
-        Service service = null;
+        Cursor c = db.rawQuery("SELECT s.*, c.name AS category_name FROM services s " +
+                "JOIN categories c ON c.id = s.category_id WHERE s.id = ?", new String[]{String.valueOf(id)});
         if (c.moveToFirst()) {
-            service = cursorToService(c);
+            Service s = cursorToService(c);
+            c.close();
+            return s;
         }
         c.close();
-        return service;
+        return null;
     }
 
     public List<Branch> getBranches() {
         List<Branch> list = new ArrayList<>();
         SQLiteDatabase db = helper.getReadableDatabase();
-        Cursor c = db.rawQuery("SELECT * FROM branches ORDER BY city", null);
+        Cursor c = db.rawQuery("SELECT * FROM branches", null);
         while (c.moveToNext()) {
             list.add(cursorToBranch(c));
         }
@@ -126,27 +128,25 @@ public class TechFixDao {
     public Branch getBranch(long id) {
         SQLiteDatabase db = helper.getReadableDatabase();
         Cursor c = db.rawQuery("SELECT * FROM branches WHERE id = ?", new String[]{String.valueOf(id)});
-        Branch branch = null;
         if (c.moveToFirst()) {
-            branch = cursorToBranch(c);
+            Branch b = cursorToBranch(c);
+            c.close();
+            return b;
         }
         c.close();
-        return branch;
+        return null;
     }
 
-    /**
-     * Branches that have at least one available technician and spare-part stock
-     * for the given service category.
-     */
     public List<Branch> getEligibleBranches(long categoryId) {
         List<Branch> list = new ArrayList<>();
         SQLiteDatabase db = helper.getReadableDatabase();
-        Cursor c = db.rawQuery(
-                "SELECT DISTINCT b.* FROM branches b "
-                        + "JOIN technicians t ON t.branch_id = b.id AND t.available = 1 "
-                        + "JOIN spare_parts p ON p.branch_id = b.id AND p.category_id = ? AND p.quantity > 0 "
-                        + "ORDER BY b.city",
-                new String[]{String.valueOf(categoryId)});
+        // A branch is eligible if it has at least one technician specializing in this category and enough spare parts
+        Cursor c = db.rawQuery("SELECT DISTINCT b.* FROM branches b " +
+                "JOIN technicians t ON t.branch_id = b.id " +
+                "JOIN spare_parts p ON p.branch_id = b.id " +
+                "WHERE p.category_id = ? AND p.quantity > 0 " +
+                "AND t.specialty_category_id = ? AND t.available = 1", 
+                new String[]{String.valueOf(categoryId), String.valueOf(categoryId)});
         while (c.moveToNext()) {
             list.add(cursorToBranch(c));
         }
@@ -154,31 +154,41 @@ public class TechFixDao {
         return list;
     }
 
-    public Technician getAvailableTechnician(long branchId) {
+    public Technician getAvailableTechnician(long branchId, long categoryId) {
         SQLiteDatabase db = helper.getReadableDatabase();
-        // Randomize or pick least busy? For now just pick first available.
-        Cursor c = db.rawQuery(
-                "SELECT t.*, b.name AS branch_name FROM technicians t "
-                        + "JOIN branches b ON b.id = t.branch_id "
-                        + "WHERE t.branch_id = ? AND t.available = 1 ORDER BY RANDOM() LIMIT 1",
-                new String[]{String.valueOf(branchId)});
-        Technician tech = null;
+        Cursor c = db.rawQuery("SELECT t.*, u.name FROM technicians t " +
+                "JOIN users u ON t.user_id = u.id " +
+                "WHERE t.branch_id = ? AND t.specialty_category_id = ? AND t.available = 1 LIMIT 1",
+                new String[]{String.valueOf(branchId), String.valueOf(categoryId)});
         if (c.moveToFirst()) {
-            tech = cursorToTechnician(c);
+            Technician t = cursorToTechnician(c);
+            c.close();
+            return t;
         }
         c.close();
-        return tech;
+        return null;
     }
 
-    public List<Technician> getTechniciansByBranch(long branchId, String query) {
+    public List<Technician> getTechniciansByBranch(long branchId, String query, Long categoryId) {
         List<Technician> list = new ArrayList<>();
         SQLiteDatabase db = helper.getReadableDatabase();
-        String q = "%" + (query == null ? "" : query.trim()) + "%";
-        Cursor c = db.rawQuery(
-                "SELECT t.*, b.name AS branch_name FROM technicians t "
-                        + "JOIN branches b ON b.id = t.branch_id "
-                        + "WHERE t.branch_id = ? AND (t.name LIKE ? OR t.specialty LIKE ?) "
-                        + "ORDER BY t.name", new String[]{String.valueOf(branchId), q, q});
+        String q = "%" + (query == null ? "" : query) + "%";
+        
+        StringBuilder sql = new StringBuilder("SELECT t.*, u.name, b.name AS branch_name FROM technicians t ")
+                .append("JOIN users u ON t.user_id = u.id ")
+                .append("JOIN branches b ON b.id = t.branch_id ")
+                .append("WHERE t.branch_id = ? AND u.name LIKE ? ");
+        
+        List<String> args = new ArrayList<>();
+        args.add(String.valueOf(branchId));
+        args.add(q);
+        
+        if (categoryId != null && categoryId > 0) {
+            sql.append("AND t.specialty_category_id = ? ");
+            args.add(String.valueOf(categoryId));
+        }
+        
+        Cursor c = db.rawQuery(sql.toString(), args.toArray(new String[0]));
         while (c.moveToNext()) {
             list.add(cursorToTechnician(c));
         }
@@ -189,12 +199,11 @@ public class TechFixDao {
     public List<Technician> getTechnicians(String query) {
         List<Technician> list = new ArrayList<>();
         SQLiteDatabase db = helper.getReadableDatabase();
-        String q = "%" + (query == null ? "" : query.trim()) + "%";
-        Cursor c = db.rawQuery(
-                "SELECT t.*, b.name AS branch_name FROM technicians t "
-                        + "JOIN branches b ON b.id = t.branch_id "
-                        + "WHERE t.name LIKE ? OR t.specialty LIKE ? OR b.name LIKE ? "
-                        + "ORDER BY b.city, t.name", new String[]{q, q, q});
+        String q = "%" + (query == null ? "" : query) + "%";
+        Cursor c = db.rawQuery("SELECT t.*, u.name, b.name AS branch_name FROM technicians t " +
+                "JOIN users u ON t.user_id = u.id " +
+                "JOIN branches b ON b.id = t.branch_id " +
+                "WHERE u.name LIKE ?", new String[]{q});
         while (c.moveToNext()) {
             list.add(cursorToTechnician(c));
         }
@@ -210,7 +219,8 @@ public class TechFixDao {
                         + "FROM spare_parts p "
                         + "JOIN branches b ON b.id = p.branch_id "
                         + "JOIN categories cat ON cat.id = p.category_id "
-                        + "ORDER BY b.city, p.name", null);
+                        + "WHERE p.branch_id > 0 "
+                        + "ORDER BY b.name, p.name", null);
         while (c.moveToNext()) {
             SparePart p = new SparePart();
             p.id = c.getLong(c.getColumnIndexOrThrow("id"));
@@ -226,11 +236,21 @@ public class TechFixDao {
         return list;
     }
 
-    public void updatePartQuantity(long partId, int quantity) {
+    public void updatePartQuantity(long id, int newQty) {
         SQLiteDatabase db = helper.getWritableDatabase();
         ContentValues v = new ContentValues();
-        v.put("quantity", Math.max(0, quantity));
-        db.update(DatabaseHelper.T_PARTS, v, "id = ?", new String[]{String.valueOf(partId)});
+        v.put("quantity", newQty);
+        db.update(DatabaseHelper.T_PARTS, v, "id = ?", new String[]{String.valueOf(id)});
+    }
+
+    public void updatePart(long id, String name, int qty, long branchId, long categoryId) {
+        SQLiteDatabase db = helper.getWritableDatabase();
+        ContentValues v = new ContentValues();
+        v.put("name", name);
+        v.put("quantity", qty);
+        v.put("branch_id", branchId);
+        v.put("category_id", categoryId);
+        db.update(DatabaseHelper.T_PARTS, v, "id = ?", new String[]{String.valueOf(id)});
     }
 
     public void updateBranch(long id, String name, String address, String city, double lat, double lng, String phone) {
@@ -250,12 +270,11 @@ public class TechFixDao {
         db.delete(DatabaseHelper.T_BRANCHES, "id = ?", new String[]{String.valueOf(id)});
     }
 
-    public void updateTechnician(long id, String name, long branchId, String specialty, int available) {
+    public void updateTechnician(long id, long branchId, long specialtyCategoryId, int available) {
         SQLiteDatabase db = helper.getWritableDatabase();
         ContentValues v = new ContentValues();
-        v.put("name", name);
         v.put("branch_id", branchId);
-        v.put("specialty", specialty);
+        v.put("specialty_category_id", specialtyCategoryId);
         v.put("available", available);
         db.update(DatabaseHelper.T_TECHNICIANS, v, "id = ?", new String[]{String.valueOf(id)});
     }
@@ -265,13 +284,14 @@ public class TechFixDao {
         db.delete(DatabaseHelper.T_TECHNICIANS, "id = ?", new String[]{String.valueOf(id)});
     }
 
-    public void updateService(long id, long categoryId, String name, double price, String description) {
+        public void updateService(long id, long catId, String name, double price, String desc, String hint) {
         SQLiteDatabase db = helper.getWritableDatabase();
         ContentValues v = new ContentValues();
-        v.put("category_id", categoryId);
+        v.put("category_id", catId);
         v.put("name", name);
         v.put("price", price);
-        v.put("description", description);
+        v.put("description", desc);
+        v.put("sample_image_hint", hint);
         db.update(DatabaseHelper.T_SERVICES, v, "id = ?", new String[]{String.valueOf(id)});
     }
 
@@ -280,13 +300,45 @@ public class TechFixDao {
         db.delete(DatabaseHelper.T_SERVICES, "id = ?", new String[]{String.valueOf(id)});
     }
 
-    public void updatePart(long id, String name, int quantity, long branchId, long categoryId) {
+    public List<SparePart> getGlobalSpareParts() {
+        List<SparePart> list = new ArrayList<>();
+        SQLiteDatabase db = helper.getReadableDatabase();
+        Cursor c = db.rawQuery(
+                "SELECT COALESCE(MAX(CASE WHEN p.branch_id = 0 THEN p.id END), MIN(p.id)) as id, " +
+                        "p.name, p.category_id, cat.name AS category_name, SUM(p.quantity) as total_qty " +
+                        "FROM spare_parts p " +
+                        "JOIN categories cat ON cat.id = p.category_id " +
+                        "GROUP BY p.name, p.category_id " +
+                        "ORDER BY p.name", null);
+        while (c.moveToNext()) {
+            SparePart p = new SparePart();
+            p.id = c.getLong(c.getColumnIndexOrThrow("id"));
+            p.name = c.getString(c.getColumnIndexOrThrow("name"));
+            p.quantity = c.getInt(c.getColumnIndexOrThrow("total_qty"));
+            p.branchId = 0;
+            p.categoryId = c.getLong(c.getColumnIndexOrThrow("category_id"));
+            p.categoryName = c.getString(c.getColumnIndexOrThrow("category_name"));
+            list.add(p);
+        }
+        c.close();
+        return list;
+    }
+
+    public long addGlobalPart(long categoryId, String name) {
         SQLiteDatabase db = helper.getWritableDatabase();
         ContentValues v = new ContentValues();
         v.put("name", name);
-        v.put("quantity", quantity);
-        v.put("branch_id", branchId);
+        v.put("quantity", 0);
+        v.put("branch_id", 0);
         v.put("category_id", categoryId);
+        return db.insert(DatabaseHelper.T_PARTS, null, v);
+    }
+
+    public void updateGlobalPart(long id, long catId, String name) {
+        SQLiteDatabase db = helper.getWritableDatabase();
+        ContentValues v = new ContentValues();
+        v.put("category_id", catId);
+        v.put("name", name);
         db.update(DatabaseHelper.T_PARTS, v, "id = ?", new String[]{String.valueOf(id)});
     }
 
@@ -295,19 +347,19 @@ public class TechFixDao {
         db.delete(DatabaseHelper.T_PARTS, "id = ?", new String[]{String.valueOf(id)});
     }
 
-    public long addCategory(String name, String description) {
+    public long addCategory(String name, String desc) {
         SQLiteDatabase db = helper.getWritableDatabase();
         ContentValues v = new ContentValues();
         v.put("name", name);
-        v.put("description", description);
+        v.put("description", desc);
         return db.insert(DatabaseHelper.T_CATEGORIES, null, v);
     }
 
-    public void updateCategory(long id, String name, String description) {
+    public void updateCategory(long id, String name, String desc) {
         SQLiteDatabase db = helper.getWritableDatabase();
         ContentValues v = new ContentValues();
         v.put("name", name);
-        v.put("description", description);
+        v.put("description", desc);
         db.update(DatabaseHelper.T_CATEGORIES, v, "id = ?", new String[]{String.valueOf(id)});
     }
 
@@ -316,37 +368,45 @@ public class TechFixDao {
         db.delete(DatabaseHelper.T_CATEGORIES, "id = ?", new String[]{String.valueOf(id)});
     }
 
-    public long addInventoryRequest(long staffId, long branchId, String itemName, int quantity, String reason) {
+    public long addInventoryRequest(long managerId, long branchId, String item, int qty, String reason) {
         SQLiteDatabase db = helper.getWritableDatabase();
         ContentValues v = new ContentValues();
-        v.put("staff_id", staffId);
+        v.put("manager_id", managerId);
         v.put("branch_id", branchId);
-        v.put("item_name", itemName);
-        v.put("quantity", quantity);
-        v.put("reason", reason);
+        v.put("item_name", item);
+        v.put("quantity", qty);
         v.put("status", "PENDING");
-        String time = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.US).format(new java.util.Date());
-        v.put("created_at", time);
+        v.put("created_at", new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.US).format(new java.util.Date()));
         long id = db.insert(DatabaseHelper.T_INVENTORY_REQUESTS, null, v);
-        
+
         // Notify Admin
-        addNotification(1, 0, "New Stock Request", 
-                "Staff requested " + quantity + "x " + itemName + " for branch ID: " + branchId, time);
+        Cursor c = db.rawQuery("SELECT id FROM users WHERE role = 'ADMIN' LIMIT 1", null);
+        if (c.moveToFirst()) {
+            addNotification(c.getLong(0), 0, "New Stock Request", "A new request for " + qty + "x " + item + " has been submitted", v.getAsString("created_at"));
+        }
+        c.close();
         return id;
     }
 
-    public List<java.util.Map<String, Object>> getInventoryRequests() {
-        List<java.util.Map<String, Object>> list = new ArrayList<>();
+    public List<Map<String, Object>> getInventoryRequests(long branchId) {
+        List<Map<String, Object>> list = new ArrayList<>();
         SQLiteDatabase db = helper.getReadableDatabase();
-        Cursor c = db.rawQuery(
-                "SELECT r.*, u.name AS staff_name, b.name AS branch_name FROM inventory_requests r " +
-                "JOIN users u ON u.id = r.staff_id " +
-                "JOIN branches b ON b.id = r.branch_id ORDER BY r.id DESC", null);
+        String sql = "SELECT r.*, b.name AS branch_name, u.name AS manager_name FROM inventory_requests r " +
+                "JOIN branches b ON b.id = r.branch_id " +
+                "JOIN users u ON u.id = r.manager_id";
+        String[] args = null;
+        if (branchId > 0) {
+            sql += " WHERE r.branch_id = ?";
+            args = new String[]{String.valueOf(branchId)};
+        }
+        sql += " ORDER BY r.id DESC";
+        Cursor c = db.rawQuery(sql, args);
         while (c.moveToNext()) {
-            java.util.Map<String, Object> map = new java.util.HashMap<>();
+            Map<String, Object> map = new HashMap<>();
             map.put("id", c.getLong(c.getColumnIndexOrThrow("id")));
-            map.put("staff_name", c.getString(c.getColumnIndexOrThrow("staff_name")));
+            map.put("branch_id", c.getLong(c.getColumnIndexOrThrow("branch_id")));
             map.put("branch_name", c.getString(c.getColumnIndexOrThrow("branch_name")));
+            map.put("manager_name", c.getString(c.getColumnIndexOrThrow("manager_name")));
             map.put("item_name", c.getString(c.getColumnIndexOrThrow("item_name")));
             map.put("quantity", c.getInt(c.getColumnIndexOrThrow("quantity")));
             map.put("status", c.getString(c.getColumnIndexOrThrow("status")));
@@ -355,6 +415,10 @@ public class TechFixDao {
         }
         c.close();
         return list;
+    }
+
+    public List<Map<String, Object>> getInventoryRequests() {
+        return getInventoryRequests(0);
     }
 
     public void updateInventoryRequestStatus(long id, String status) {
@@ -369,20 +433,43 @@ public class TechFixDao {
             if (cReq.moveToFirst()) {
                 long bId = cReq.getLong(0);
                 String name = cReq.getString(1);
-                int qty = cReq.getInt(2);
-                db.execSQL("UPDATE " + DatabaseHelper.T_PARTS + " SET quantity = quantity + ? WHERE branch_id = ? AND name = ?",
-                        new Object[]{qty, bId, name});
+                int qtyToAdd = cReq.getInt(2);
+                
+                // Try to find existing record in this branch
+                Cursor cExist = db.rawQuery("SELECT id, quantity FROM spare_parts WHERE branch_id = ? AND name = ?", new String[]{String.valueOf(bId), name});
+                if (cExist.moveToFirst()) {
+                    long partId = cExist.getLong(0);
+                    int currentQty = cExist.getInt(1);
+                    ContentValues vUpd = new ContentValues();
+                    vUpd.put("quantity", currentQty + qtyToAdd);
+                    db.update(DatabaseHelper.T_PARTS, vUpd, "id = ?", new String[]{String.valueOf(partId)});
+                } else {
+                    // Not found, we need a category_id to insert. Let's find it from global parts
+                    long catId = 1; // Default
+                    Cursor cCat = db.rawQuery("SELECT category_id FROM spare_parts WHERE name = ? AND branch_id = 0 LIMIT 1", new String[]{name});
+                    if (cCat.moveToFirst()) catId = cCat.getLong(0);
+                    cCat.close();
+                    
+                    ContentValues vPart = new ContentValues();
+                    vPart.put("name", name);
+                    vPart.put("quantity", qtyToAdd);
+                    vPart.put("branch_id", bId);
+                    vPart.put("category_id", catId);
+                    db.insert(DatabaseHelper.T_PARTS, null, vPart);
+                }
+                cExist.close();
             }
             cReq.close();
         }
 
-        // Notify Staff
-        Cursor c = db.rawQuery("SELECT staff_id, item_name FROM inventory_requests WHERE id = ?", new String[]{String.valueOf(id)});
+        // Notify Manager
+        Cursor c = db.rawQuery("SELECT manager_id, branch_id, item_name FROM inventory_requests WHERE id = ?", new String[]{String.valueOf(id)});
         if (c.moveToFirst()) {
-            long staffId = c.getLong(0);
-            String item = c.getString(1);
-            String time = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.US).format(new java.util.Date());
-            addNotification(staffId, 0, "Stock Request Update", "Your request for " + item + " was " + status.toLowerCase(), time);
+            long managerId = c.getLong(0);
+            String item = c.getString(2);
+            String time = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.US).format(new java.util.Date());
+
+            addNotification(managerId, 0, "Stock Request Update", "Your request for " + item + " was " + status.toLowerCase(), time);
         }
         c.close();
     }
@@ -409,85 +496,97 @@ public class TechFixDao {
         return db.insert(DatabaseHelper.T_TECHNICIANS, null, v);
     }
 
-    public long addService(long categoryId, String name, double price, String description) {
+    public long addService(long categoryId, String name, double price, String desc, String hint) {
         SQLiteDatabase db = helper.getWritableDatabase();
         ContentValues v = new ContentValues();
         v.put("category_id", categoryId);
         v.put("name", name);
         v.put("price", price);
-        v.put("description", description);
+        v.put("description", desc);
+        v.put("sample_image_hint", hint);
         return db.insert(DatabaseHelper.T_SERVICES, null, v);
     }
 
-    public long addPart(String name, int quantity, long branchId, long categoryId) {
+    public long addPart(String name, int qty, long branchId, long categoryId) {
         SQLiteDatabase db = helper.getWritableDatabase();
         ContentValues v = new ContentValues();
         v.put("name", name);
-        v.put("quantity", quantity);
+        v.put("quantity", qty);
         v.put("branch_id", branchId);
         v.put("category_id", categoryId);
         return db.insert(DatabaseHelper.T_PARTS, null, v);
     }
 
-    public long insertAppointment(long customerId, long branchId, long technicianId, long serviceId,
-                                  String deviceNote, String status, String createdAt) {
+    public long insertAppointment(long customerId, long branchId, long technicianId, long serviceId, String deviceName, String issue, String photo, String status, String time) {
         SQLiteDatabase db = helper.getWritableDatabase();
         ContentValues v = new ContentValues();
         v.put("customer_id", customerId);
-        v.put("branch_id", branchId);
-        v.put("technician_id", technicianId);
+        v.put("branch_id", branchId > 0 ? branchId : null);
+        v.put("technician_id", technicianId > 0 ? technicianId : null);
         v.put("service_id", serviceId);
-        v.put("device_note", deviceNote);
+        v.put("device_name", deviceName);
+        v.put("issue_description", issue);
+        v.put("device_photo", photo);
         v.put("status", status);
-        v.put("created_at", createdAt);
-        long appointmentId = db.insert(DatabaseHelper.T_APPOINTMENTS, null, v);
+        v.put("created_at", time);
+        long id = db.insert(DatabaseHelper.T_APPOINTMENTS, null, v);
 
-        Service service = getService(serviceId);
-        ContentValues pay = new ContentValues();
-        pay.put("appointment_id", appointmentId);
-        pay.put("amount", service == null ? 0 : service.price);
-        pay.put("method", "CASH");
-        pay.put("paid", 0);
-        db.insert(DatabaseHelper.T_PAYMENTS, null, pay);
+        // Initial Payment record
+        Service s = getService(serviceId);
+        if (s != null) {
+            ContentValues p = new ContentValues();
+            p.put("appointment_id", id);
+            p.put("amount", s.price);
+            p.put("status", "PENDING");
+            db.insert(DatabaseHelper.T_PAYMENTS, null, p);
+        }
 
-        // Notify Owner (Admin ID is 1)
-        String time = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.US).format(new java.util.Date());
-        addNotification(1, appointmentId, "New Repair Request",
-                "A new booking for " + (service != null ? service.name : "Repair") + " has been received. Technician: -",
-                time);
+        // Notify Branch Manager if branch is assigned
+        if (branchId > 0) {
+            Cursor c = db.rawQuery("SELECT id FROM users WHERE branch_id = ? AND (role = 'MANAGER' OR role = 'BRANCH_MANAGER') LIMIT 1", new String[]{String.valueOf(branchId)});
+            if (c.moveToFirst()) {
+                addNotification(c.getLong(0), id, "New Repair Assigned", "New request for " + (s != null ? s.name : "repair"), time);
+            }
+            c.close();
+        }
 
-        return appointmentId;
+        return id;
     }
 
-    public List<Appointment> getAppointmentsForCustomer(long customerId, boolean historyOnly) {
-        String extra = historyOnly
-                ? " AND a.status IN ('COMPLETED','CANCELLED') "
-                : " AND a.status NOT IN ('COMPLETED','CANCELLED') ";
-        return queryAppointments("WHERE a.customer_id = ?" + extra + "ORDER BY a.id DESC",
-                new String[]{String.valueOf(customerId)});
+    public List<Appointment> getAppointmentsForCustomer(long customerId, boolean onlyActive) {
+        String where = "WHERE a.customer_id = " + customerId;
+        if (onlyActive) {
+            where += " AND a.status NOT IN ('COMPLETED', 'CANCELLED')";
+        } else {
+            where += " AND a.status IN ('COMPLETED', 'CANCELLED')";
+        }
+        return queryAppointments(where + " ORDER BY a.id DESC", null);
     }
 
-    public List<Appointment> getAllAppointments(String query) {
-        String q = "%" + (query == null ? "" : query.trim()) + "%";
-        return queryAppointments("WHERE (u.name LIKE ? OR s.name LIKE ? OR a.status LIKE ?) "
-                + "AND (a.status NOT IN ('COMPLETED') OR p.paid = 0) ORDER BY a.id DESC", new String[]{q, q, q});
+    public List<Appointment> getAllAppointments(String status, long branchId) {
+        String where = (status == null || status.equals("ALL")) ? "" : "WHERE a.status = '" + status + "'";
+        if (branchId > 0) {
+            if (where.isEmpty()) where = "WHERE a.branch_id = " + branchId;
+            else where += " AND a.branch_id = " + branchId;
+        }
+        return queryAppointments(where + " ORDER BY a.id DESC", null);
     }
 
-    public List<Appointment> getTechnicianAppointments(long userId, String query) {
-        String q = "%" + (query == null ? "" : query.trim()) + "%";
-        // Find technician name for this staff user
-        String techName = "";
+    public List<Appointment> getTechnicianAppointments(long staffUserId, String status) {
+        // Find technician ID for this staff user
+        long techId = 0;
         SQLiteDatabase db = helper.getReadableDatabase();
-        Cursor cu = db.rawQuery("SELECT name FROM users WHERE id = ?", new String[]{String.valueOf(userId)});
-        if (cu.moveToFirst()) techName = cu.getString(0);
+        Cursor cu = db.rawQuery("SELECT id FROM technicians WHERE user_id = ?", new String[]{String.valueOf(staffUserId)});
+        if (cu.moveToFirst()) techId = cu.getLong(0);
         cu.close();
 
-        return queryAppointments("WHERE t.name = ? AND (u.name LIKE ? OR s.name LIKE ? OR a.status LIKE ?) ORDER BY a.id DESC",
-                new String[]{techName, q, q, q});
+        String where = "WHERE a.technician_id = ?";
+        if (!status.equals("ALL")) where += " AND a.status = '" + status + "'";
+        return queryAppointments(where + " ORDER BY a.id DESC", new String[]{String.valueOf(techId)});
     }
 
     public List<Appointment> getCompletedAppointments() {
-        return queryAppointments("WHERE a.status = 'COMPLETED' AND p.paid = 1 ORDER BY a.id DESC", null);
+        return queryAppointments("WHERE a.status = 'COMPLETED' ORDER BY a.id DESC", null);
     }
 
     public Appointment getAppointment(long id) {
@@ -495,44 +594,40 @@ public class TechFixDao {
         return list.isEmpty() ? null : list.get(0);
     }
 
-    public void updatePassword(String email, String newPassword) {
+    public void updatePassword(String email, String newPass) {
         SQLiteDatabase db = helper.getWritableDatabase();
         ContentValues v = new ContentValues();
-        v.put("password", newPassword);
-        db.update(DatabaseHelper.T_USERS, v, "email = ?", new String[]{email.trim()});
+        v.put("password", newPass);
+        db.update(DatabaseHelper.T_USERS, v, "email = ?", new String[]{email});
     }
 
-    public void updateProfile(long userId, String name, String phone) {
+    public void updateProfile(long id, String name, String phone) {
         SQLiteDatabase db = helper.getWritableDatabase();
         ContentValues v = new ContentValues();
         v.put("name", name);
         v.put("phone", phone);
-        db.update(DatabaseHelper.T_USERS, v, "id = ?", new String[]{String.valueOf(userId)});
+        db.update(DatabaseHelper.T_USERS, v, "id = ?", new String[]{String.valueOf(id)});
     }
 
     public List<User> getStaff() {
         List<User> list = new ArrayList<>();
         SQLiteDatabase db = helper.getReadableDatabase();
-        Cursor c = db.rawQuery(
-                "SELECT u.*, b.name AS branch_name FROM users u " +
-                        "LEFT JOIN branches b ON b.id = u.branch_id " +
-                        "WHERE u.role IN ('STAFF', 'ADMIN') ORDER BY u.name", null);
+        Cursor c = db.rawQuery("SELECT u.*, b.name as branch_name FROM users u LEFT JOIN branches b ON u.branch_id = b.id WHERE u.role IN ('STAFF', 'MANAGER')", null);
         while (c.moveToNext()) {
-            User u = cursorToUser(c);
-            int idx = c.getColumnIndex("branch_name");
-            if (idx >= 0) u.branchName = c.getString(idx);
-            list.add(u);
+            User user = cursorToUser(c);
+            user.branchName = c.getString(c.getColumnIndexOrThrow("branch_name"));
+            list.add(user);
         }
         c.close();
         return list;
     }
 
-    public long addUser(String name, String email, String password, String phone, String role, long branchId) {
+    public long addUser(String name, String email, String pass, String phone, String role, long branchId) {
         SQLiteDatabase db = helper.getWritableDatabase();
         ContentValues v = new ContentValues();
         v.put("name", name);
-        v.put("email", email.trim());
-        v.put("password", password);
+        v.put("email", email);
+        v.put("password", pass);
         v.put("phone", phone);
         v.put("role", role);
         v.put("branch_id", branchId);
@@ -543,7 +638,7 @@ public class TechFixDao {
         SQLiteDatabase db = helper.getWritableDatabase();
         ContentValues v = new ContentValues();
         v.put("name", name);
-        v.put("email", email.trim());
+        v.put("email", email);
         v.put("phone", phone);
         v.put("role", role);
         v.put("branch_id", branchId);
@@ -555,68 +650,59 @@ public class TechFixDao {
         db.delete(DatabaseHelper.T_USERS, "id = ?", new String[]{String.valueOf(id)});
     }
 
-    public void assignAppointment(long id, long branchId, long technicianId) {
+    public void assignAppointment(long apptId, long branchId, long techId) {
         SQLiteDatabase db = helper.getWritableDatabase();
         ContentValues v = new ContentValues();
         v.put("branch_id", branchId);
-        v.put("technician_id", technicianId);
+        v.put("technician_id", techId);
         v.put("status", "ASSIGNED");
-        db.update(DatabaseHelper.T_APPOINTMENTS, v, "id = ?", new String[]{String.valueOf(id)});
+        db.update(DatabaseHelper.T_APPOINTMENTS, v, "id = ?", new String[]{String.valueOf(apptId)});
 
-        Appointment a = getAppointment(id);
-        if (a != null) {
-            String time = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.US).format(new java.util.Date());
-            
-            // Notify customer
-            addNotification(a.customerId, id, "Technician Assigned",
-                    "A technician (" + a.technicianName + ") has been assigned to your " + a.serviceName + " repair.",
-                    time);
-
-            // Notify Technician (if they have a user account, otherwise we might skip or notify a generic tech user)
-            // For now, let's assume we notify the technician user if we can find one by name or similar.
-            // However, the tech table and user table are separate. 
-            // In a better design, Technician would link to User. 
-            // Since they are separate, we'll notify all STAFF/ADMIN about the assignment for now, 
-            // or if we had a specific mapping, we'd use that.
-            // For the requirement "technician receives request notification":
-            // We'll search for a user with the same name as the technician to notify them.
-            Cursor c = db.rawQuery("SELECT id FROM users WHERE name = ? AND role = 'STAFF' LIMIT 1", new String[]{a.technicianName});
-            if (c.moveToFirst()) {
-                addNotification(c.getLong(0), id, "New Job Assigned",
-                        "You have been assigned to a new " + a.serviceName + " request for " + a.customerName + ".",
-                        time);
-            }
-            c.close();
+        // Notify Technician (based on user_id)
+        Cursor cTech = db.rawQuery("SELECT user_id FROM technicians WHERE id = ?", new String[]{String.valueOf(techId)});
+        if (cTech.moveToFirst()) {
+            long techUserId = cTech.getLong(0);
+            String time = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.US).format(new java.util.Date());
+            addNotification(techUserId, apptId, "New Repair Assigned", "You have been assigned a new repair task.", time);
         }
+        cTech.close();
+
+        // Notify Customer
+        Cursor c = db.rawQuery("SELECT customer_id FROM appointments WHERE id = ?", new String[]{String.valueOf(apptId)});
+        if (c.moveToFirst()) {
+            long custId = c.getLong(0);
+            String time = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.US).format(new java.util.Date());
+            addNotification(custId, apptId, "Technician Assigned", "A technician has been assigned to your repair.", time);
+        }
+        c.close();
     }
 
-    public void addRepairImage(long appointmentId, String path, String caption) {
+    public void addRepairImage(long apptId, String path, String caption) {
         SQLiteDatabase db = helper.getWritableDatabase();
         ContentValues v = new ContentValues();
-        v.put("appointment_id", appointmentId);
+        v.put("appointment_id", apptId);
         v.put("file_path", path);
         v.put("caption", caption);
         db.insert(DatabaseHelper.T_IMAGES, null, v);
 
-        // Notify customer about new photo
-        Appointment a = getAppointment(appointmentId);
-        if (a != null) {
-            String time = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.US).format(new java.util.Date());
-            addNotification(a.customerId, appointmentId, "Repair Photo Added",
-                    "A new photo has been uploaded for your " + a.serviceName + " repair.",
-                    time);
+        // Notify Customer
+        Cursor c = db.rawQuery("SELECT customer_id FROM appointments WHERE id = ?", new String[]{String.valueOf(apptId)});
+        if (c.moveToFirst()) {
+            long custId = c.getLong(0);
+            String time = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.US).format(new java.util.Date());
+            addNotification(custId, apptId, "Repair Update", "A new photo has been added to your repair progress.", time);
         }
+        c.close();
     }
 
-    public List<RepairImage> getImages(long appointmentId) {
+    public List<RepairImage> getImages(long apptId) {
         List<RepairImage> list = new ArrayList<>();
         SQLiteDatabase db = helper.getReadableDatabase();
-        Cursor c = db.rawQuery("SELECT * FROM repair_images WHERE appointment_id = ? ORDER BY id DESC",
-                new String[]{String.valueOf(appointmentId)});
+        Cursor c = db.rawQuery("SELECT * FROM repair_images WHERE appointment_id = ?", new String[]{String.valueOf(apptId)});
         while (c.moveToNext()) {
             RepairImage img = new RepairImage();
             img.id = c.getLong(c.getColumnIndexOrThrow("id"));
-            img.appointmentId = appointmentId;
+            img.appointmentId = c.getLong(c.getColumnIndexOrThrow("appointment_id"));
             img.filePath = c.getString(c.getColumnIndexOrThrow("file_path"));
             img.caption = c.getString(c.getColumnIndexOrThrow("caption"));
             list.add(img);
@@ -625,69 +711,87 @@ public class TechFixDao {
         return list;
     }
 
-    public List<Payment> getPayments() {
+    public List<Payment> getPayments(long branchId) {
         List<Payment> list = new ArrayList<>();
         SQLiteDatabase db = helper.getReadableDatabase();
-        Cursor c = db.rawQuery(
-                "SELECT p.*, u.name AS customer_name, s.name AS service_name "
-                        + "FROM payments p "
-                        + "JOIN appointments a ON a.id = p.appointment_id "
-                        + "JOIN users u ON u.id = a.customer_id "
-                        + "JOIN services s ON s.id = a.service_id "
-                        + "ORDER BY p.id DESC", null);
+        String sql = "SELECT p.*, u.name AS customer_name, s.name AS service_name, b.name AS branch_name " +
+                "FROM payments p " +
+                "JOIN appointments a ON a.id = p.appointment_id " +
+                "JOIN users u ON u.id = a.customer_id " +
+                "JOIN services s ON s.id = a.service_id " +
+                "LEFT JOIN branches b ON b.id = a.branch_id ";
+        
+        String[] args = null;
+        if (branchId > 0) {
+            sql += " WHERE a.branch_id = ?";
+            args = new String[]{String.valueOf(branchId)};
+        }
+        
+        sql += " ORDER BY p.id DESC";
+        
+        Cursor c = db.rawQuery(sql, args);
         while (c.moveToNext()) {
             Payment p = new Payment();
             p.id = c.getLong(c.getColumnIndexOrThrow("id"));
             p.appointmentId = c.getLong(c.getColumnIndexOrThrow("appointment_id"));
             p.amount = c.getDouble(c.getColumnIndexOrThrow("amount"));
             p.method = c.getString(c.getColumnIndexOrThrow("method"));
-            p.paid = c.getInt(c.getColumnIndexOrThrow("paid"));
+            p.status = c.getString(c.getColumnIndexOrThrow("status"));
             p.paidAt = c.getString(c.getColumnIndexOrThrow("paid_at"));
             p.customerName = c.getString(c.getColumnIndexOrThrow("customer_name"));
             p.serviceName = c.getString(c.getColumnIndexOrThrow("service_name"));
+            p.branchName = c.getString(c.getColumnIndexOrThrow("branch_name"));
             list.add(p);
         }
         c.close();
         return list;
     }
 
-    public Payment getPaymentForAppointment(long appointmentId) {
+    public Payment getPaymentForAppointment(long apptId) {
         SQLiteDatabase db = helper.getReadableDatabase();
-        Cursor c = db.rawQuery("SELECT * FROM payments WHERE appointment_id = ? LIMIT 1",
-                new String[]{String.valueOf(appointmentId)});
-        Payment p = null;
+        Cursor c = db.rawQuery("SELECT * FROM payments WHERE appointment_id = ?", new String[]{String.valueOf(apptId)});
         if (c.moveToFirst()) {
-            p = new Payment();
+            Payment p = new Payment();
             p.id = c.getLong(c.getColumnIndexOrThrow("id"));
-            p.appointmentId = appointmentId;
+            p.appointmentId = c.getLong(c.getColumnIndexOrThrow("appointment_id"));
             p.amount = c.getDouble(c.getColumnIndexOrThrow("amount"));
             p.method = c.getString(c.getColumnIndexOrThrow("method"));
-            p.paid = c.getInt(c.getColumnIndexOrThrow("paid"));
+            p.status = c.getString(c.getColumnIndexOrThrow("status"));
             p.paidAt = c.getString(c.getColumnIndexOrThrow("paid_at"));
+            c.close();
+            return p;
         }
         c.close();
-        return p;
+        return null;
     }
 
-    public void markPaid(long paymentId, String method, String paidAt) {
+    public void markPaid(long apptId, String method, String time) {
         SQLiteDatabase db = helper.getWritableDatabase();
         ContentValues v = new ContentValues();
-        v.put("paid", 1);
         v.put("method", method);
-        v.put("paid_at", paidAt);
-        db.update(DatabaseHelper.T_PAYMENTS, v, "id = ?", new String[]{String.valueOf(paymentId)});
+        v.put("status", "COMPLETED");
+        v.put("paid_at", time);
+        db.update(DatabaseHelper.T_PAYMENTS, v, "appointment_id = ?", new String[]{String.valueOf(apptId)});
 
-        // Notify customer and owner
-        SQLiteDatabase rdb = helper.getReadableDatabase();
-        Cursor c = rdb.rawQuery("SELECT appointment_id FROM payments WHERE id = ?", new String[]{String.valueOf(paymentId)});
+        // Notify Admin and Customer
+        Cursor c = db.rawQuery("SELECT u.name, s.name, p.amount, a.customer_id FROM appointments a " +
+                "JOIN users u ON u.id = a.customer_id " +
+                "JOIN services s ON s.id = a.service_id " +
+                "JOIN payments p ON p.appointment_id = a.id " +
+                "WHERE a.id = ?", new String[]{String.valueOf(apptId)});
         if (c.moveToFirst()) {
-            long apptId = c.getLong(0);
-            Appointment a = getAppointment(apptId);
-            if (a != null) {
-                String msg = "Payment of " + com.techfix.app.ui.UiHelper.money(a.servicePrice) + " for " + a.serviceName + " has been confirmed.";
-                addNotification(a.customerId, apptId, "Payment Confirmed", msg, paidAt);
-                addNotification(1, apptId, "Payment Received", "Received " + msg + " from " + a.customerName + ".", paidAt);
+            String name = c.getString(0);
+            String service = c.getString(1);
+            double amount = c.getDouble(2);
+            long custId = c.getLong(3);
+            
+            Cursor cAdmin = db.rawQuery("SELECT id FROM users WHERE role = 'ADMIN' LIMIT 1", null);
+            if (cAdmin.moveToFirst()) {
+                addNotification(cAdmin.getLong(0), apptId, "Payment Received", "Received " + amount + " from " + name + " for " + service, time);
             }
+            cAdmin.close();
+
+            addNotification(custId, apptId, "Payment Confirmed", "Your payment of LKR " + amount + " for " + service + " has been confirmed.", time);
         }
         c.close();
     }
@@ -698,46 +802,37 @@ public class TechFixDao {
         v.put("status", status);
         db.update(DatabaseHelper.T_APPOINTMENTS, v, "id = ?", new String[]{String.valueOf(id)});
 
-        Appointment a = getAppointment(id);
-        if (a != null) {
-            String time = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.US).format(new java.util.Date());
-            String msg = "Your repair for " + a.serviceName + " is now " + status.replace("_", " ").toLowerCase() + ".";
-            
-            // Notify customer
-            addNotification(a.customerId, id, "Repair Update", msg, time);
-            
-            // If COMPLETED, notify Owner as well
-            if ("COMPLETED".equals(status)) {
-                addNotification(1, id, "Task Completed", 
-                        "Technician " + a.technicianName + " has completed the repair for " + a.customerName + ".", 
-                        time);
-            }
+        // Notify Customer
+        Cursor c = db.rawQuery("SELECT customer_id FROM appointments WHERE id = ?", new String[]{String.valueOf(id)});
+        if (c.moveToFirst()) {
+            long custId = c.getLong(0);
+            String time = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.US).format(new java.util.Date());
+            addNotification(custId, id, "Repair Status Update", "Your repair status is now: " + status, time);
         }
+        c.close();
     }
 
-    public void addNotification(long userId, long appointmentId, String title, String message, String createdAt) {
+    public void addNotification(long userId, long apptId, String title, String msg, String time) {
         SQLiteDatabase db = helper.getWritableDatabase();
         ContentValues v = new ContentValues();
         v.put("user_id", userId);
-        v.put("appointment_id", appointmentId);
+        v.put("appointment_id", apptId > 0 ? apptId : null);
         v.put("title", title);
-        v.put("message", message);
-        v.put("created_at", createdAt);
+        v.put("message", msg);
+        v.put("created_at", time);
         v.put("is_read", 0);
         db.insert(DatabaseHelper.T_NOTIFICATIONS, null, v);
     }
 
-    public List<com.techfix.app.model.Notification> getNotifications(long userId) {
-        List<com.techfix.app.model.Notification> list = new ArrayList<>();
+    public List<Notification> getNotifications(long userId) {
+        List<Notification> list = new ArrayList<>();
         SQLiteDatabase db = helper.getReadableDatabase();
-        Cursor c = db.rawQuery("SELECT * FROM notifications WHERE user_id = ? ORDER BY id DESC",
-                new String[]{String.valueOf(userId)});
+        Cursor c = db.rawQuery("SELECT * FROM notifications WHERE user_id = ? ORDER BY id DESC", new String[]{String.valueOf(userId)});
         while (c.moveToNext()) {
-            com.techfix.app.model.Notification n = new com.techfix.app.model.Notification();
+            Notification n = new Notification();
             n.id = c.getLong(c.getColumnIndexOrThrow("id"));
-            n.userId = userId;
-            n.appointmentId = c.isNull(c.getColumnIndexOrThrow("appointment_id")) 
-                    ? 0 : c.getLong(c.getColumnIndexOrThrow("appointment_id"));
+            n.userId = c.getLong(c.getColumnIndexOrThrow("user_id"));
+            n.appointmentId = c.isNull(c.getColumnIndexOrThrow("appointment_id")) ? 0 : c.getLong(c.getColumnIndexOrThrow("appointment_id"));
             n.title = c.getString(c.getColumnIndexOrThrow("title"));
             n.message = c.getString(c.getColumnIndexOrThrow("message"));
             n.createdAt = c.getString(c.getColumnIndexOrThrow("created_at"));
@@ -762,8 +857,8 @@ public class TechFixDao {
         db.update(DatabaseHelper.T_NOTIFICATIONS, v, "id = ?", new String[]{String.valueOf(id)});
     }
 
-    public java.util.Map<String, Object> getAdminStats() {
-        java.util.Map<String, Object> stats = new java.util.HashMap<>();
+    public Map<String, Object> getAdminStats() {
+        Map<String, Object> stats = new HashMap<>();
         SQLiteDatabase db = helper.getReadableDatabase();
 
         Cursor c1 = db.rawQuery("SELECT COUNT(*) FROM appointments WHERE status = 'PENDING'", null);
@@ -774,38 +869,79 @@ public class TechFixDao {
         if (c2.moveToFirst()) stats.put("completed_repairs", c2.getInt(0));
         c2.close();
         
-        Cursor c4 = db.rawQuery("SELECT COUNT(*) FROM appointments WHERE status = 'ASSIGNED'", null);
+        Cursor c4 = db.rawQuery("SELECT COUNT(*) FROM appointments WHERE status IN ('ASSIGNED', 'IN_PROGRESS')", null);
         if (c4.moveToFirst()) stats.put("ongoing_repairs", c4.getInt(0));
         c4.close();
 
-        Cursor c3 = db.rawQuery("SELECT SUM(amount) FROM payments WHERE paid = 1", null);
+        Cursor c3 = db.rawQuery("SELECT SUM(amount) FROM payments WHERE status = 'COMPLETED'", null);
         if (c3.moveToFirst()) stats.put("revenue", c3.getDouble(0));
+        c3.close();
+
+        Cursor c5 = db.rawQuery("SELECT COUNT(*) FROM inventory_requests WHERE status = 'PENDING'", null);
+        if (c5.moveToFirst()) stats.put("pending_stock", c5.getInt(0));
+        c5.close();
+
+        Cursor c6 = db.rawQuery("SELECT SUM(amount) FROM payments WHERE status = 'COMPLETED' AND date(paid_at) = date('now')", null);
+        if (c6.moveToFirst()) stats.put("daily_revenue", c6.getDouble(0));
+        c6.close();
+
+        return stats;
+    }
+
+    public Map<String, Object> getStaffStats(long userId) {
+        Map<String, Object> stats = new HashMap<>();
+        SQLiteDatabase db = helper.getReadableDatabase();
+        
+        // Find technician ID for this staff user
+        long techId = 0;
+        Cursor cu = db.rawQuery("SELECT id FROM technicians WHERE user_id = ?", new String[]{String.valueOf(userId)});
+        if (cu.moveToFirst()) techId = cu.getLong(0);
+        cu.close();
+
+        Cursor c1 = db.rawQuery("SELECT COUNT(*) FROM appointments WHERE technician_id = ?", new String[]{String.valueOf(techId)});
+        if (c1.moveToFirst()) stats.put("total", c1.getInt(0));
+        c1.close();
+
+        Cursor c2 = db.rawQuery("SELECT COUNT(*) FROM appointments WHERE technician_id = ? AND status IN ('PENDING', 'ASSIGNED', 'IN_PROGRESS')", new String[]{String.valueOf(techId)});
+        if (c2.moveToFirst()) stats.put("pending", c2.getInt(0));
+        c2.close();
+
+        Cursor c3 = db.rawQuery("SELECT COUNT(*) FROM appointments WHERE technician_id = ? AND status = 'COMPLETED'", new String[]{String.valueOf(techId)});
+        if (c3.moveToFirst()) stats.put("completed", c3.getInt(0));
         c3.close();
 
         return stats;
     }
 
-    public java.util.Map<String, Object> getStaffStats(long userId) {
-        java.util.Map<String, Object> stats = new java.util.HashMap<>();
+    public Map<String, Object> getBranchManagerStats(long branchId) {
+        Map<String, Object> stats = new HashMap<>();
         SQLiteDatabase db = helper.getReadableDatabase();
-        
-        // Find technician name for this staff user
-        String techName = "";
-        Cursor cu = db.rawQuery("SELECT name FROM users WHERE id = ?", new String[]{String.valueOf(userId)});
-        if (cu.moveToFirst()) techName = cu.getString(0);
-        cu.close();
 
-        Cursor c1 = db.rawQuery("SELECT COUNT(*) FROM appointments a " +
-                "LEFT JOIN technicians t ON t.id = a.technician_id " +
-                "WHERE t.name = ? AND a.status NOT IN ('COMPLETED', 'CANCELLED')", new String[]{techName});
-        if (c1.moveToFirst()) stats.put("assigned", c1.getInt(0));
+        String[] branchArg = new String[]{String.valueOf(branchId)};
+
+        Cursor c1 = db.rawQuery("SELECT COUNT(*) FROM appointments WHERE branch_id = ? AND status = 'PENDING'", branchArg);
+        if (c1.moveToFirst()) stats.put("pending_repairs", c1.getInt(0));
         c1.close();
 
-        Cursor c2 = db.rawQuery("SELECT COUNT(*) FROM appointments a " +
-                "LEFT JOIN technicians t ON t.id = a.technician_id " +
-                "WHERE t.name = ? AND a.status = 'COMPLETED'", new String[]{techName});
-        if (c2.moveToFirst()) stats.put("completed", c2.getInt(0));
+        Cursor c2 = db.rawQuery("SELECT COUNT(*) FROM appointments WHERE branch_id = ? AND status = 'COMPLETED'", branchArg);
+        if (c2.moveToFirst()) stats.put("completed_repairs", c2.getInt(0));
         c2.close();
+
+        Cursor c4 = db.rawQuery("SELECT COUNT(*) FROM appointments WHERE branch_id = ? AND status IN ('ASSIGNED', 'IN_PROGRESS')", branchArg);
+        if (c4.moveToFirst()) stats.put("ongoing_repairs", c4.getInt(0));
+        c4.close();
+
+        Cursor c3 = db.rawQuery("SELECT SUM(amount) FROM payments p JOIN appointments a ON p.appointment_id = a.id WHERE a.branch_id = ? AND p.status = 'COMPLETED'", branchArg);
+        if (c3.moveToFirst()) stats.put("revenue", c3.getDouble(0));
+        c3.close();
+
+        Cursor c5 = db.rawQuery("SELECT COUNT(*) FROM inventory_requests WHERE branch_id = ? AND status = 'PENDING'", branchArg);
+        if (c5.moveToFirst()) stats.put("pending_stock", c5.getInt(0));
+        c5.close();
+
+        Cursor c6 = db.rawQuery("SELECT SUM(amount) FROM payments p JOIN appointments a ON p.appointment_id = a.id WHERE a.branch_id = ? AND p.status = 'COMPLETED' AND date(p.paid_at) = date('now')", branchArg);
+        if (c6.moveToFirst()) stats.put("daily_revenue", c6.getDouble(0));
+        c6.close();
 
         return stats;
     }
@@ -815,12 +951,13 @@ public class TechFixDao {
         SQLiteDatabase db = helper.getReadableDatabase();
         Cursor c = db.rawQuery(
                 "SELECT a.*, u.name AS customer_name, b.name AS branch_name, "
-                        + "t.name AS technician_name, s.name AS service_name, s.price AS service_price, "
-                        + "p.paid AS paid_status "
+                        + "ut.name AS technician_name, s.name AS service_name, s.price AS service_price, "
+                        + "p.status AS payment_status "
                         + "FROM appointments a "
                         + "JOIN users u ON u.id = a.customer_id "
                         + "LEFT JOIN branches b ON b.id = a.branch_id "
                         + "LEFT JOIN technicians t ON t.id = a.technician_id "
+                        + "LEFT JOIN users ut ON t.user_id = ut.id "
                         + "JOIN services s ON s.id = a.service_id "
                         + "LEFT JOIN payments p ON p.appointment_id = a.id "
                         + whereOrder, args);
@@ -859,11 +996,15 @@ public class TechFixDao {
         t.id = c.getLong(c.getColumnIndexOrThrow("id"));
         t.name = c.getString(c.getColumnIndexOrThrow("name"));
         t.branchId = c.getLong(c.getColumnIndexOrThrow("branch_id"));
-        t.specialty = c.getString(c.getColumnIndexOrThrow("specialty"));
         t.available = c.getInt(c.getColumnIndexOrThrow("available"));
         int idx = c.getColumnIndex("branch_name");
         if (idx >= 0) {
             t.branchName = c.getString(idx);
+        }
+        int sidx = c.getColumnIndex("specialty_category_id");
+        if (sidx >= 0) {
+            // Mapping category ID to specialty string if needed, or just keeping the ID
+            // For now, let's just keep the name from User join
         }
         return t;
     }
@@ -892,7 +1033,9 @@ public class TechFixDao {
         a.technicianId = c.isNull(c.getColumnIndexOrThrow("technician_id"))
                 ? 0 : c.getLong(c.getColumnIndexOrThrow("technician_id"));
         a.serviceId = c.getLong(c.getColumnIndexOrThrow("service_id"));
-        a.deviceNote = c.getString(c.getColumnIndexOrThrow("device_note"));
+        a.deviceName = c.getString(c.getColumnIndexOrThrow("device_name"));
+        a.issueDescription = c.getString(c.getColumnIndexOrThrow("issue_description"));
+        a.devicePhoto = c.getString(c.getColumnIndexOrThrow("device_photo"));
         a.status = c.getString(c.getColumnIndexOrThrow("status"));
         a.createdAt = c.getString(c.getColumnIndexOrThrow("created_at"));
         a.customerName = c.getString(c.getColumnIndexOrThrow("customer_name"));
@@ -900,9 +1043,9 @@ public class TechFixDao {
         a.technicianName = c.getString(c.getColumnIndexOrThrow("technician_name"));
         a.serviceName = c.getString(c.getColumnIndexOrThrow("service_name"));
         a.servicePrice = c.getDouble(c.getColumnIndexOrThrow("service_price"));
-        int paidIdx = c.getColumnIndex("paid_status");
+        int paidIdx = c.getColumnIndex("payment_status");
         if (paidIdx >= 0) {
-            a.paid = c.getInt(paidIdx);
+            a.paymentStatus = c.getString(paidIdx);
         }
         return a;
     }

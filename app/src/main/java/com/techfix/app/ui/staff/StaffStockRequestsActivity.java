@@ -1,5 +1,6 @@
-package com.techfix.app.ui.admin;
+package com.techfix.app.ui.staff;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -9,6 +10,7 @@ import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.Spinner;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.Nullable;
 import androidx.annotation.OptIn;
@@ -24,18 +26,18 @@ import com.techfix.app.ui.SimpleAdapter;
 import com.techfix.app.ui.UiHelper;
 import com.techfix.app.util.SessionManager;
 
-import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 import java.util.ArrayList;
 import java.util.List;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 import java.util.Map;
 
-@OptIn(markerClass = ExperimentalBadgeUtils.class)
-public class AdminInventoryRequestsActivity extends AppCompatActivity {
+public class StaffStockRequestsActivity extends AppCompatActivity {
     private TechFixDao dao;
-    private SessionManager session;
     private SimpleAdapter<Map<String, Object>> adapter;
     private List<Map<String, Object>> allRequests = new ArrayList<>();
+    private SessionManager session;
 
+    @OptIn(markerClass = ExperimentalBadgeUtils.class)
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -84,72 +86,42 @@ public class AdminInventoryRequestsActivity extends AppCompatActivity {
             else if (qtyObj instanceof Long) qty = ((Long) qtyObj).intValue();
 
             title.setText(getString(R.string.label_qty_x, qty, item.get("item_name")));
-            subtitle.setText(getString(R.string.label_history_meta, item.get("branch_name"), getString(R.string.label_by_user, item.get("manager_name"))));
+            subtitle.setText(getString(R.string.label_history_meta, item.get("branch_name"), (String) item.get("created_at")));
             meta.setText((String) item.get("status"));
         }, item -> {
-            if (getString(R.string.status_pending).equals(item.get("status"))) {
+            // Optional: Show details or reason
+            String reason = (String) item.get("reason");
+            if (reason != null && !reason.isEmpty()) {
                 new AlertDialog.Builder(this)
-                        .setTitle(R.string.dialog_fulfill_request)
-                        .setMessage(getString(R.string.msg_fulfill_request, item.get("item_name")))
-                        .setPositiveButton(R.string.action_approve, (dialog, which) -> {
-                            dao.updateInventoryRequestStatus((long) item.get("id"), getString(R.string.status_approved));
-                            load();
-                        })
-                        .setNegativeButton(R.string.action_reject, (dialog, which) -> {
-                            dao.updateInventoryRequestStatus((long) item.get("id"), getString(R.string.status_rejected));
-                            load();
-                        })
-                        .setNeutralButton(R.string.action_cancel, null)
+                        .setTitle(R.string.dialog_request_details)
+                        .setMessage(getString(R.string.label_reason, reason))
+                        .setPositiveButton(android.R.string.ok, null)
                         .show();
             }
         });
         recycler.setAdapter(adapter);
-        load();
 
-        if (session.isAdmin()) {
+        if (session.isStaff() || session.isManager()) {
             findViewById(R.id.fabAdd).setVisibility(View.VISIBLE);
-            findViewById(R.id.fabAdd).setOnClickListener(v -> showAddGlobalPartDialog());
+            findViewById(R.id.fabAdd).setOnClickListener(v -> {
+                Intent intent = new Intent(this, StaffPartsActivity.class);
+                intent.putExtra("mode", "request");
+                startActivity(intent);
+            });
         } else {
             findViewById(R.id.fabAdd).setVisibility(View.GONE);
         }
     }
 
-    private void showAddGlobalPartDialog() {
-        android.view.View view = android.view.LayoutInflater.from(this).inflate(R.layout.dialog_add_part, null);
-        android.widget.Spinner branchSpin = view.findViewById(R.id.spinnerBranch);
-        android.widget.Spinner catSpin = view.findViewById(R.id.spinnerCategory);
-        android.widget.EditText name = view.findViewById(R.id.inputName);
-        android.widget.EditText qty = view.findViewById(R.id.inputQuantity);
-
-        branchSpin.setVisibility(View.GONE); // Defaulting to Global
-
-        java.util.List<com.techfix.app.model.Category> categories = dao.getCategories();
-        ArrayAdapter<com.techfix.app.model.Category> cAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, categories);
-        catSpin.setAdapter(cAdapter);
-
-        new AlertDialog.Builder(this)
-                .setTitle(R.string.dialog_add_global_part)
-                .setView(view)
-                .setPositiveButton(R.string.action_add, (dialog, which) -> {
-                    com.techfix.app.model.Category c = (com.techfix.app.model.Category) catSpin.getSelectedItem();
-                    String n = name.getText().toString();
-                    String qStr = qty.getText().toString();
-                    if (c != null && !n.isEmpty() && !qStr.isEmpty()) {
-                        dao.addPart(n, Integer.parseInt(qStr), 0, c.id);
-                        load();
-                        android.widget.Toast.makeText(this, R.string.msg_part_added, android.widget.Toast.LENGTH_SHORT).show();
-                    }
-                })
-                .setNegativeButton(R.string.action_cancel, null)
-                .show();
+    @Override
+    protected void onResume() {
+        super.onResume();
+        load();
     }
 
     private void load() {
-        if (session.isManager()) {
-            allRequests = dao.getInventoryRequests(session.getBranchId());
-        } else {
-            allRequests = dao.getInventoryRequests();
-        }
+        List<Map<String, Object>> all = dao.getInventoryRequests(session.getBranchId());
+        allRequests = new ArrayList<>(all);
         filter();
     }
 

@@ -1,5 +1,6 @@
 package com.techfix.app.ui.admin;
 
+import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.View;
@@ -8,11 +9,13 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.Nullable;
+import androidx.annotation.OptIn;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.google.android.material.badge.ExperimentalBadgeUtils;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.techfix.app.R;
 import com.techfix.app.data.TechFixDao;
@@ -23,6 +26,7 @@ import com.techfix.app.ui.UiHelper;
 import java.util.ArrayList;
 import java.util.List;
 
+@OptIn(markerClass = ExperimentalBadgeUtils.class)
 public class AdminCategoriesActivity extends AppCompatActivity {
     private TechFixDao dao;
     private SimpleAdapter<Category> adapter;
@@ -33,7 +37,7 @@ public class AdminCategoriesActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_list);
         dao = new TechFixDao(this);
-        UiHelper.setupToolbar(this, "Manage Categories", true);
+        UiHelper.setupToolbar(this, getString(R.string.title_manage_categories), true);
 
         findViewById(R.id.filterLayout).setVisibility(View.VISIBLE);
         findViewById(R.id.spinnerFilter).setVisibility(View.GONE);
@@ -51,11 +55,11 @@ public class AdminCategoriesActivity extends AppCompatActivity {
         adapter = new SimpleAdapter<>((item, image, title, subtitle, meta) -> {
             title.setText(item.name);
             subtitle.setText(item.description);
-            meta.setText("ID: " + item.id);
+            meta.setText(getString(R.string.label_id, item.id));
         }, item -> {
             new AlertDialog.Builder(this)
                     .setTitle(item.name)
-                    .setItems(new String[]{"Edit", "Delete"}, (dialog, which) -> {
+                    .setItems(new String[]{getString(R.string.action_edit), getString(R.string.action_delete)}, (dialog, which) -> {
                         if (which == 0) showDialog(item);
                         else {
                             dao.deleteCategory(item.id);
@@ -100,9 +104,9 @@ public class AdminCategoriesActivity extends AppCompatActivity {
         }
 
         new AlertDialog.Builder(this)
-                .setTitle(item == null ? "Add Category" : "Edit Category")
+                .setTitle(item == null ? R.string.dialog_add_category : R.string.dialog_update_category)
                 .setView(v)
-                .setPositiveButton("Save", (dialog, which) -> {
+                .setPositiveButton(R.string.action_save, (dialog, which) -> {
                     String name = inputName.getText().toString().trim();
                     String desc = inputDesc.getText().toString().trim();
                     if (name.isEmpty()) return;
@@ -111,7 +115,7 @@ public class AdminCategoriesActivity extends AppCompatActivity {
                     else dao.updateCategory(item.id, name, desc);
                     load();
                 })
-                .setNegativeButton("Cancel", null)
+                .setNegativeButton(R.string.action_cancel, null)
                 .show();
     }
 }

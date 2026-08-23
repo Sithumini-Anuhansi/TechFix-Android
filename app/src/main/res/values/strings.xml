@@ -6,6 +6,151 @@
     <string name="home_image_desc">Repair shop home image</string>
     <string name="forgot_password">Forgot Password?</string>
     <string name="hi_user">Hi, %1$s (%2$s)</string>
+    <string name="label_id">ID: %1$d</string>
+
+    <string name="title_spare_parts">Spare Parts</string>
+    <string name="title_manage_services">Manage Services</string>
+    <string name="title_manage_branches">Manage Branches</string>
+    <string name="title_manage_staff">Manage Staff</string>
+    <string name="title_manage_categories">Manage Categories</string>
+    <string name="title_stock_requests">Stock Requests</string>
+    <string name="title_pending_repairs">Pending Repairs</string>
+    <string name="title_pending_requests">Pending Requests</string>
+    <string name="title_repairs">Repairs</string>
+    <string name="title_payments">Payments</string>
+    <string name="title_repair_details">Repair Details</string>
+    <string name="title_book_repair">Book Repair</string>
+    <string name="title_dashboard">Dashboard</string>
+    <string name="title_repair_services">Repair Services</string>
+    <string name="title_track_repair">Track Repair</string>
+    <string name="title_service_detail">Service Detail</string>
+    <string name="title_photos">Repaired Device Photos</string>
+    <string name="label_sample_photos">Sample repaired-device photos: %1$s</string>
+    <string name="title_repair_history">Repair History</string>
+    <string name="msg_no_repairs">No previous repairs</string>
+    <string name="all_categories">All Categories</string>
+    <string name="all_branches">All Branches</string>
+    <string name="all_statuses">All Statuses</string>
+    <string name="all_types">All Types</string>
+    <string name="all_payments">All Payments</string>
+    <string name="all_items">All</string>
+    <string name="type_stock">Stock Request</string>
+    <string name="type_repair">Repair Request</string>
+    <string name="status_pending">PENDING</string>
+    <string name="status_assigned">ASSIGNED</string>
+    <string name="status_in_progress">IN_PROGRESS</string>
+    <string name="status_completed">COMPLETED</string>
+    <string name="status_cancelled">CANCELLED</string>
+    <string name="status_unassigned">Unassigned</string>
+    <string name="status_paid">Paid</string>
+    <string name="status_awaiting_payment">Awaiting Payment</string>
+    <string name="status_approved">APPROVED</string>
+    <string name="status_rejected">REJECTED</string>
+    <string name="label_qty">Qty: %1$d</string>
+    <string name="label_qty_x">%1$dx %2$s</string>
+    <string name="label_qty_total">Total Qty: %1$d</string>
+    <string name="branch_category_sep">%1$s · %2$s</string>
+    <string name="currency_format">LKR %1$,.0f</string>
+
+    <string name="msg_part_added">Part added</string>
+    <string name="msg_part_updated">Part updated</string>
+    <string name="msg_part_deleted">Part deleted</string>
+    <string name="msg_service_added">Service added</string>
+    <string name="msg_service_updated">Service updated</string>
+    <string name="msg_service_deleted">Service deleted</string>
+    <string name="msg_branch_added">Branch added</string>
+    <string name="msg_branch_updated">Branch updated</string>
+    <string name="msg_branch_deleted">Branch deleted</string>
+    <string name="msg_staff_added">Employee added</string>
+    <string name="msg_staff_updated">Employee updated</string>
+    <string name="msg_staff_deleted">Employee deleted</string>
+    <string name="msg_status_updated">Status updated</string>
+    <string name="msg_payment_recorded">Payment recorded</string>
+    <string name="msg_no_payment">No payment record</string>
+    <string name="msg_photo_saved">Photo saved</string>
+    <string name="msg_photo_hint">Choose a job, then use Capture repaired device photo</string>
+    <string name="msg_empty_photos">Open an appointment to capture photos with the camera</string>
+    <string name="msg_tap_to_capture">Tap to open and capture after-repair photos</string>
+    <string name="msg_assign_success">Technician assigned and notified</string>
+    <string name="msg_no_tech_available">No technician available in this branch</string>
+    <string name="msg_camera_error">Could not open camera</string>
+    <string name="msg_camera_permission">Camera permission is required</string>
+    <string name="msg_no_services">No matching services</string>
+    <string name="msg_unauthorized">Unauthorized access</string>
+    <string name="label_reason">Reason: %1$s</string>
+
+    <string name="dialog_add_part">Add Spare Part</string>
+    <string name="dialog_update_part">Update Spare Part</string>
+    <string name="dialog_update_qty">Update Quantity: %1$s</string>
+    <string name="dialog_add_service">Add New Service</string>
+    <string name="dialog_update_service">Update Service</string>
+    <string name="dialog_add_branch">Add New Branch</string>
+    <string name="dialog_update_branch">Update Branch</string>
+    <string name="dialog_add_staff">Add New Staff</string>
+    <string name="dialog_update_staff">Update Staff</string>
+    <string name="dialog_add_category">Add Category</string>
+    <string name="dialog_update_category">Edit Category</string>
+    <string name="dialog_request_details">Request Details</string>
+    <string name="dialog_add_global_part">Add Global Part</string>
+    <string name="dialog_fulfill_request">Fulfill Request?</string>
+    <string name="msg_fulfill_request">Approve or Reject this stock request for %1$s?</string>
+
+    <string name="action_update_details">Update Details</string>
+    <string name="action_adjust_quantity">Adjust Quantity</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_update">Update</string>
+    <string name="action_add">Add</string>
+    <string name="action_save">Save</string>
+    <string name="action_cancel">Cancel</string>
+
+    <string name="msg_fill_fields">Fill required fields</string>
+    <string name="coming_soon">Coming soon</string>
+    <string name="role_admin">Admin</string>
+    <string name="role_staff">Staff</string>
+    <string name="role_branch_manager">Branch Manager</string>
+    <string name="role_customer">Customer</string>
+    <string name="label_employee_role">Employee Role</string>
+    <string name="label_by_user">By %1$s</string>
+    <string name="msg_request_submitted">Request submitted to Admin</string>
+    <string name="dialog_request_stock">Request Stock</string>
+    <string name="action_submit">Submit</string>
+    <string name="action_approve">Approve</string>
+    <string name="action_reject">Reject</string>
+    <string name="action_view_staff">View Staff</string>
+    <string name="action_view_spare_parts">View Spare Parts</string>
+    <string name="action_view_repairs">View Repairs</string>
+    <string name="action_view_payments">View Payments</string>
+    <string name="action_edit">Edit</string>
+
+    <string name="payment_confirmed_msg">Payment of %1$s for %2$s has been confirmed.</string>
+    <string name="payment_received_msg">Received Payment of %1$s for %2$s from %3$s.</string>
+
+    <string name="label_service_info">%1$s — %2$s</string>
+    <string name="label_history_meta">%1$s · %2$s</string>
+    <string name="label_appointment_details">Price: %1$s\n</string>
+    <string name="label_appointment_service">Service: %1$s (%2$s)\n</string>
+    <string name="label_repair_details_summary">Customer: %1$s\nService: %2$s (%3$s)\nBranch: %4$s\nTechnician: %5$s\nStatus: %6$s\nNote: %7$s\nPayment: %8$s</string>
+    <string name="label_payment_paid">Paid %1$s</string>
+    <string name="label_payment_paid_info">Paid %1$s at %2$s</string>
+    <string name="label_payment_unpaid">Unpaid</string>
+    <string name="label_track_summary">Service: %1$s\nPrice: %2$s\nBranch: %3$s\nTechnician: %4$s\nBooked: %5$s\nDevice: %6$s\nPayment: %7$s</string>
+    <string name="label_none">—</string>
+    <string name="hint_gps_ready">GPS ready. Nearest eligible branch: %1$s (%2$.1f km)</string>
+    <string name="hint_gps_no_branch">GPS ready. No eligible branch found for this category.</string>
+    <string name="hint_location_unavailable">Location unavailable. Choose a branch below.</string>
+    <string name="hint_location_denied">Location permission denied. Choose a branch below.</string>
+    <string name="label_auto_branch">Auto — nearest branch with GPS</string>
+    <string name="label_branch_city">%1$s (%2$s)</string>
+    <string name="msg_describe_issue">Describe the device and issue</string>
+    <string name="msg_no_eligible_branch">No branch currently has a technician and parts for this service</string>
+    <string name="msg_no_branch_available">No branches available for this service</string>
+    <string name="msg_repair_booked">Repair request sent to %1$s. Waiting for assignment.</string>
+
+    <string-array name="part_options">
+        <item>@string/action_update_details</item>
+        <item>@string/action_adjust_quantity</item>
+        <item>@string/action_delete</item>
+    </string-array>
 
     <string-array name="payment_methods">
         <item>CASH</item>
@@ -18,4 +163,6 @@
         <item>COMPLETED</item>
         <item>CANCELLED</item>
     </string-array>
+    <string name="label_branch_full_address">%1$s, %2$s</string>
+    <string name="label_our_branches">Our Branches</string>
 </resources>

@@ -24,19 +24,20 @@ public class RepairHistoryActivity extends AppCompatActivity {
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_list);
-        UiHelper.setupToolbar(this, "Repair history", true);
+        UiHelper.setupToolbar(this, getString(R.string.title_repair_history), true);
         findViewById(R.id.searchLayout).setVisibility(View.GONE);
 
         long userId = new SessionManager(this).getUserId();
-        List<Appointment> list = new TechFixDao(this).getAppointmentsForCustomer(userId, true);
+        List<Appointment> list = new TechFixDao(this).getAppointmentsForCustomer(userId, false);
         TextView empty = findViewById(R.id.txtEmpty);
-        empty.setText("No previous repairs");
+        empty.setText(R.string.msg_no_repairs);
         empty.setVisibility(list.isEmpty() ? View.VISIBLE : View.GONE);
 
         SimpleAdapter<Appointment> adapter = new SimpleAdapter<>((item, image, title, subtitle, meta) -> {
             title.setText(item.serviceName);
-            subtitle.setText((item.branchName == null ? "" : item.branchName + " — ") + item.createdAt);
-            meta.setText(item.status + " · " + UiHelper.money(item.servicePrice));
+            String sub = (item.branchName == null ? "" : item.branchName + " — ") + item.createdAt;
+            subtitle.setText(sub);
+            meta.setText(getString(R.string.label_history_meta, item.status, UiHelper.money(this, item.servicePrice)));
         }, item -> {
             Intent intent = new Intent(this, AppointmentTrackActivity.class);
             intent.putExtra("appointmentId", item.id);

@@ -10,8 +10,8 @@ android {
         applicationId "com.techfix.app"
         minSdk 24
         targetSdk 34
-        versionCode 1
-        versionName "1.0"
+        versionCode 2
+        versionName "2.0"
     }
 
     buildTypes {
@@ -36,4 +36,5 @@ dependencies {
     implementation 'androidx.activity:activity:1.9.2'
     implementation 'com.google.android.gms:play-services-location:21.3.0'
     implementation 'com.google.android.gms:play-services-maps:19.0.0'
+    implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.1.0'
 }

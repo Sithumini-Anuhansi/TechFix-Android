@@ -18,4 +18,5 @@
     <color name="chip_done">#2E7D32</color>
     <color name="chip_cancel">#C62828</color>
     <color name="launcher_bg">#0D7377</color>
+    <color name="background_light">#E8F4FD</color>
 </resources>

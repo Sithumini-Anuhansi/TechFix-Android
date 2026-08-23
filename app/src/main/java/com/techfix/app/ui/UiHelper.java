@@ -4,17 +4,24 @@ import android.content.Intent;
 import android.view.MenuItem;
 import android.widget.Toast;
 
+import androidx.annotation.OptIn;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.material.appbar.MaterialToolbar;
+import com.google.android.material.badge.ExperimentalBadgeUtils;
 import com.techfix.app.R;
 import com.techfix.app.data.TechFixDao;
 import com.techfix.app.ui.auth.LoginActivity;
 import com.techfix.app.util.SessionManager;
 
 public class UiHelper {
-    @com.google.android.material.badge.ExperimentalBadgeUtils
+    @OptIn(markerClass = ExperimentalBadgeUtils.class)
     public static void setupToolbar(AppCompatActivity activity, String title, boolean showBack) {
+        setupToolbar(activity, title, showBack, true);
+    }
+
+    @OptIn(markerClass = ExperimentalBadgeUtils.class)
+    public static void setupToolbar(AppCompatActivity activity, String title, boolean showBack, boolean showMenu) {
         MaterialToolbar toolbar = activity.findViewById(R.id.toolbar);
         if (toolbar == null) {
             return;
@@ -35,33 +42,36 @@ public class UiHelper {
             toolbar.setNavigationIcon(androidx.appcompat.R.drawable.abc_ic_ab_back_material);
             toolbar.setNavigationOnClickListener(v -> activity.finish());
         }
-        toolbar.inflateMenu(R.menu.menu_main);
-        
-        SessionManager session = new SessionManager(activity);
-        String role = session.getRole();
-        
-        MenuItem itemDashboard = toolbar.getMenu().findItem(R.id.action_dashboard);
-        MenuItem itemHelp = toolbar.getMenu().findItem(R.id.action_help);
-        
-        if ("CUSTOMER".equals(role)) {
-            if (itemDashboard != null) itemDashboard.setVisible(false);
-            if (itemHelp != null) itemHelp.setVisible(true);
-        } else {
-            // ADMIN or STAFF
-            if (itemDashboard != null) itemDashboard.setVisible(true);
-            if (itemHelp != null) itemHelp.setVisible(false);
+
+        if (showMenu) {
+            toolbar.inflateMenu(R.menu.menu_main);
+            
+            SessionManager session = new SessionManager(activity);
+            String role = session.getRole();
+            
+            MenuItem itemDashboard = toolbar.getMenu().findItem(R.id.action_dashboard);
+            MenuItem itemHelp = toolbar.getMenu().findItem(R.id.action_help);
+            
+            if ("CUSTOMER".equals(role)) {
+                if (itemDashboard != null) itemDashboard.setVisible(true);
+                if (itemHelp != null) itemHelp.setVisible(true);
+            } else {
+                // ADMIN or STAFF
+                if (itemDashboard != null) itemDashboard.setVisible(true);
+                if (itemHelp != null) itemHelp.setVisible(false);
+            }
+
+            toolbar.setOnMenuItemClickListener(item -> handleMenu(activity, item));
+
+            updateNotificationBadge(activity, toolbar);
         }
-
-        toolbar.setOnMenuItemClickListener(item -> handleMenu(activity, item));
-
-        updateNotificationBadge(activity, toolbar);
     }
 
-    @com.google.android.material.badge.ExperimentalBadgeUtils
+    @OptIn(markerClass = ExperimentalBadgeUtils.class)
     public static void updateNotificationBadge(AppCompatActivity activity, MaterialToolbar toolbar) {
         TechFixDao dao = new TechFixDao(activity);
         SessionManager session = new SessionManager(activity);
-        if (session.isLoggedIn()) {
+        if (session.isLoggedIn() && toolbar.getMenu().findItem(R.id.action_notifications) != null) {
             int unreadCount = 0;
             java.util.List<com.techfix.app.model.Notification> list = dao.getNotifications(session.getUserId());
             for (com.techfix.app.model.Notification n : list) {
@@ -76,10 +86,13 @@ public class UiHelper {
                 badge.setBadgeTextColor(androidx.core.content.ContextCompat.getColor(activity, R.color.white));
                 com.google.android.material.badge.BadgeUtils.attachBadgeDrawable(badge, toolbar, R.id.action_notifications);
             } else {
-                // To remove a badge, there isn't a direct "removeBadge" on toolbar. 
-                // We'd need to keep a reference or use a trick. 
-                // However, often re-inflating or hiding is enough if we don't have the reference.
-                // For simplicity in this helper, we'll try to detach if possible or just rely on next setup.
+                // To clear a badge from a Toolbar MenuItem when you don't have the Drawable reference:
+                // The most reliable way is to force a menu refresh or remove the badge from the view overlay.
+                // For this CW implementation, we'll try to detach using the BadgeUtils with a null drawable 
+                // but correctly targeting the toolbar.
+                try {
+                    com.google.android.material.badge.BadgeUtils.detachBadgeDrawable(null, toolbar, R.id.action_notifications);
+                } catch (Exception ignored) {}
             }
         }
     }
@@ -107,16 +120,17 @@ public class UiHelper {
             }
             return true;
         } else if (id == R.id.action_notifications) {
+            new TechFixDao(activity).markNotificationsRead(new SessionManager(activity).getUserId());
             activity.startActivity(new Intent(activity, com.techfix.app.ui.customer.NotificationsActivity.class));
             return true;
         } else if (id == R.id.action_help) {
-            Toast.makeText(activity, "Coming soon", Toast.LENGTH_SHORT).show();
+            Toast.makeText(activity, R.string.coming_soon, Toast.LENGTH_SHORT).show();
             return true;
         }
         return false;
     }
 
-    public static String money(double value) {
-        return "LKR " + String.format(java.util.Locale.US, "%,.0f", value);
+    public static String money(android.content.Context context, double value) {
+        return context.getString(R.string.currency_format, value);
     }
 }

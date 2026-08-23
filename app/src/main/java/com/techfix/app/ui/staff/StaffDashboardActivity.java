@@ -5,8 +5,10 @@ import android.os.Bundle;
 import android.widget.TextView;
 
 import androidx.annotation.Nullable;
+import androidx.annotation.OptIn;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.google.android.material.badge.ExperimentalBadgeUtils;
 import com.techfix.app.R;
 import com.techfix.app.data.TechFixDao;
 import com.techfix.app.ui.UiHelper;
@@ -14,43 +16,56 @@ import com.techfix.app.util.SessionManager;
 
 import java.util.Map;
 
+@OptIn(markerClass = ExperimentalBadgeUtils.class)
 public class StaffDashboardActivity extends AppCompatActivity {
     private TechFixDao dao;
     private SessionManager session;
-    private TextView txtStatAssigned, txtStatCompleted;
+    private TextView txtStatTotal, txtStatAssigned, txtStatCompleted;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_staff_dashboard);
+        super.setContentView(R.layout.activity_staff_dashboard);
         
         dao = new TechFixDao(this);
         session = new SessionManager(this);
-        UiHelper.setupToolbar(this, "Dashboard", false);
+        UiHelper.setupToolbar(this, getString(R.string.title_dashboard), false);
         
         TextView welcome = findViewById(R.id.txtWelcome);
-        String roleLabel = "ADMIN".equals(session.getRole()) ? "Administrator" : "TechFix Staff";
+        String roleLabel = getString(R.string.role_staff);
+        if (session.isAdmin()) roleLabel = getString(R.string.role_admin);
+        else if (session.isManager()) roleLabel = getString(R.string.role_branch_manager);
+
         welcome.setText(getString(R.string.hi_user, session.getName(), roleLabel));
 
+        txtStatTotal = findViewById(R.id.txtStatTotal);
         txtStatAssigned = findViewById(R.id.txtStatAssigned);
         txtStatCompleted = findViewById(R.id.txtStatCompleted);
 
         loadStats();
 
-        findViewById(R.id.btnAppointments).setOnClickListener(v ->
-                startActivity(new Intent(this, StaffAppointmentsActivity.class)));
+        findViewById(R.id.btnAppointments).setOnClickListener(v -> {
+            Intent intent = new Intent(this, StaffAppointmentsActivity.class);
+            intent.putExtra("filter_status", "ALL");
+            startActivity(intent);
+        });
+        
+        // Only allow technicians/staff to see the Technicians menu if they need to see colleagues,
+        // but typically staff just sees their own tasks.
+        // For now, let's keep it but restrict access.
+
         findViewById(R.id.btnTechnicians).setOnClickListener(v ->
                 startActivity(new Intent(this, StaffTechniciansActivity.class)));
-        findViewById(R.id.btnParts).setOnClickListener(v ->
-                startActivity(new Intent(this, StaffPartsActivity.class)));
-        findViewById(R.id.btnPayments).setOnClickListener(v ->
-                startActivity(new Intent(this, StaffPaymentsActivity.class)));
-        findViewById(R.id.btnPhotos).setOnClickListener(v ->
-                startActivity(new Intent(this, StaffPhotosActivity.class)));
+        
+        if (session.isStaff()) {
+            findViewById(R.id.btnPhotos).setOnClickListener(v ->
+                    startActivity(new Intent(this, StaffPhotosActivity.class)));
+        } else {
+            findViewById(R.id.btnPhotos).setVisibility(android.view.View.GONE);
+        }
+
         findViewById(R.id.btnBranches).setOnClickListener(v ->
                 startActivity(new Intent(this, StaffBranchesActivity.class)));
-
-        findViewById(R.id.btnStockRequest).setOnClickListener(v -> showStockRequestDialog());
     }
 
     private void showStockRequestDialog() {
@@ -60,9 +75,9 @@ public class StaffDashboardActivity extends AppCompatActivity {
         android.widget.EditText inputReason = v.findViewById(R.id.inputReason);
 
         new androidx.appcompat.app.AlertDialog.Builder(this)
-                .setTitle("Request Stock")
+                .setTitle(R.string.dialog_request_stock)
                 .setView(v)
-                .setPositiveButton("Submit", (dialog, which) -> {
+                .setPositiveButton(R.string.action_submit, (dialog, which) -> {
                     String item = inputItem.getText().toString().trim();
                     String qtyStr = inputQty.getText().toString().trim();
                     String reason = inputReason.getText().toString().trim();
@@ -71,9 +86,9 @@ public class StaffDashboardActivity extends AppCompatActivity {
                     int qty = Integer.parseInt(qtyStr);
                     
                     dao.addInventoryRequest(session.getUserId(), session.getBranchId(), item, qty, reason);
-                    android.widget.Toast.makeText(this, "Request submitted to Admin", android.widget.Toast.LENGTH_SHORT).show();
+                    android.widget.Toast.makeText(this, R.string.msg_request_submitted, android.widget.Toast.LENGTH_SHORT).show();
                 })
-                .setNegativeButton("Cancel", null)
+                .setNegativeButton(R.string.action_cancel, null)
                 .show();
     }
 
@@ -81,11 +96,18 @@ public class StaffDashboardActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         loadStats();
+        UiHelper.updateNotificationBadge(this, findViewById(R.id.toolbar));
     }
 
     private void loadStats() {
-        Map<String, Object> stats = dao.getStaffStats(session.getUserId());
-        txtStatAssigned.setText(String.valueOf(stats.getOrDefault("assigned", 0)));
+        Map<String, Object> stats;
+        if (session.isManager()) {
+            stats = dao.getBranchManagerStats(session.getBranchId());
+        } else {
+            stats = dao.getStaffStats(session.getUserId());
+        }
+        txtStatTotal.setText(String.valueOf(stats.getOrDefault("total", 0)));
+        txtStatAssigned.setText(String.valueOf(stats.getOrDefault("pending", 0)));
         txtStatCompleted.setText(String.valueOf(stats.getOrDefault("completed", 0)));
     }
 }

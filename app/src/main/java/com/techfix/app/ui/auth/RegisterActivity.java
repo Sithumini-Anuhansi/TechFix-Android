@@ -19,13 +19,14 @@ public class RegisterActivity extends AppCompatActivity {
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_register);
-        UiHelper.setupToolbar(this, "Create account", true);
+        UiHelper.setupToolbar(this, "Create account", true, false);
 
         TextInputEditText name = findViewById(R.id.inputName);
         TextInputEditText email = findViewById(R.id.inputEmail);
         TextInputEditText phone = findViewById(R.id.inputPhone);
         TextInputEditText password = findViewById(R.id.inputPassword);
         MaterialButton register = findViewById(R.id.btnRegister);
+        findViewById(R.id.btnBackLogin).setOnClickListener(v -> finish());
 
         register.setOnClickListener(v -> {
             String n = text(name);

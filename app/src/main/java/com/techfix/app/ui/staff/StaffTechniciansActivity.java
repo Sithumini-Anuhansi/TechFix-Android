@@ -39,13 +39,21 @@ public class StaffTechniciansActivity extends AppCompatActivity {
             title.setText(item.name);
             subtitle.setText(item.specialty);
             meta.setText(item.branchName + (item.available == 1 ? " · Available" : " · Busy"));
-        }, item -> showOptions(item));
+        }, item -> {
+            if (session.isManager() || session.isAdmin()) {
+                showOptions(item);
+            }
+        });
 
         recycler.setAdapter(adapter);
         load();
 
-        findViewById(R.id.fabAdd).setVisibility(View.VISIBLE);
-        findViewById(R.id.fabAdd).setOnClickListener(v -> showAddDialog());
+        if (session.isStaff()) {
+            findViewById(R.id.fabAdd).setVisibility(View.GONE);
+        } else {
+            findViewById(R.id.fabAdd).setVisibility(View.VISIBLE);
+            findViewById(R.id.fabAdd).setOnClickListener(v -> showAddDialog());
+        }
     }
 
     private void showAddDialog() {
@@ -57,6 +65,16 @@ public class StaffTechniciansActivity extends AppCompatActivity {
         List<com.techfix.app.model.Branch> branches = dao.getBranches();
         android.widget.ArrayAdapter<com.techfix.app.model.Branch> bAdapter = new android.widget.ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, branches);
         branchSpin.setAdapter(bAdapter);
+
+        if (session.isManager()) {
+            for (int i = 0; i < branches.size(); i++) {
+                if (branches.get(i).id == session.getBranchId()) {
+                    branchSpin.setSelection(i);
+                    branchSpin.setEnabled(false);
+                    break;
+                }
+            }
+        }
 
         new androidx.appcompat.app.AlertDialog.Builder(this)
                 .setTitle("Add Technician")
@@ -77,16 +95,20 @@ public class StaffTechniciansActivity extends AppCompatActivity {
 
     private void load() {
         List<Technician> list;
-        if ("ADMIN".equals(session.getRole())) {
-            list = dao.getTechnicians(null);
+        if (session.isAdmin()) {
+            list = dao.getTechnicians("");
         } else {
-            list = dao.getTechniciansByBranch(session.getBranchId(), null);
+            list = dao.getTechniciansByBranch(session.getBranchId(), "", null);
         }
         adapter.submit(list);
         findViewById(R.id.txtEmpty).setVisibility(list.isEmpty() ? View.VISIBLE : View.GONE);
     }
 
     private void showOptions(Technician tech) {
+        if (session.isManager() && tech.branchId != session.getBranchId()) {
+             return;
+        }
+
         new androidx.appcompat.app.AlertDialog.Builder(this)
                 .setTitle(tech.name)
                 .setItems(new String[]{"Delete"}, (dialog, which) -> {

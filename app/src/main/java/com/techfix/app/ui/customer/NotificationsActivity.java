@@ -6,10 +6,12 @@ import android.view.View;
 import android.widget.TextView;
 
 import androidx.annotation.Nullable;
+import androidx.annotation.OptIn;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.google.android.material.badge.ExperimentalBadgeUtils;
 import com.techfix.app.R;
 import com.techfix.app.data.TechFixDao;
 import com.techfix.app.model.Notification;
@@ -24,12 +26,17 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class NotificationsActivity extends AppCompatActivity {
+    @OptIn(markerClass = ExperimentalBadgeUtils.class)
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_notifications);
+        super.setContentView(R.layout.activity_notifications);
         UiHelper.setupToolbar(this, "Notifications", true);
 
+        refresh();
+    }
+
+    private void refresh() {
         long userId = new SessionManager(this).getUserId();
         TechFixDao dao = new TechFixDao(this);
         List<Notification> list = dao.getNotifications(userId);
@@ -48,9 +55,9 @@ public class NotificationsActivity extends AppCompatActivity {
                 title.setTextColor(getResources().getColor(android.R.color.black));
             }
         }, item -> {
-            String role = new SessionManager(this).getRole();
+            SessionManager session = new SessionManager(this);
             if (item.appointmentId > 0) {
-                if ("CUSTOMER".equals(role)) {
+                if ("CUSTOMER".equals(session.getRole())) {
                     Intent intent = new Intent(this, AppointmentTrackActivity.class);
                     intent.putExtra("appointmentId", item.appointmentId);
                     startActivity(intent);
@@ -59,10 +66,19 @@ public class NotificationsActivity extends AppCompatActivity {
                     intent.putExtra("appointmentId", item.appointmentId);
                     startActivity(intent);
                 }
-            } else if (!"CUSTOMER".equals(role)) {
-                // For Staff/Admin, if it's a payment notification, go to payments
-                if (item.title.contains("Payment")) {
+            } else if (item.title != null) {
+                if (item.title.contains("Stock Request")) {
+                    if (session.isAdmin()) {
+                        startActivity(new Intent(this, com.techfix.app.ui.admin.AdminInventoryRequestsActivity.class));
+                    } else if (session.isManager() || session.isStaff()) {
+                        startActivity(new Intent(this, com.techfix.app.ui.staff.StaffStockRequestsActivity.class));
+                    }
+                } else if (item.title.contains("Payment") && !"CUSTOMER".equals(session.getRole())) {
                     startActivity(new Intent(this, StaffPaymentsActivity.class));
+                } else if (item.title.contains("Technician") || item.title.contains("assigned") || item.title.contains("Task")) {
+                    if (session.isStaff() || session.isManager()) {
+                        startActivity(new Intent(this, com.techfix.app.ui.staff.StaffAppointmentsActivity.class));
+                    }
                 }
             }
         });
@@ -74,5 +90,12 @@ public class NotificationsActivity extends AppCompatActivity {
         
         dao.markNotificationsRead(userId);
         UiHelper.updateNotificationBadge(this, findViewById(R.id.toolbar));
+    }
+
+    @OptIn(markerClass = ExperimentalBadgeUtils.class)
+    @Override
+    protected void onResume() {
+        super.onResume();
+        refresh();
     }
 }

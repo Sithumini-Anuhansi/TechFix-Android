@@ -18,7 +18,7 @@ public class ServiceDetailActivity extends AppCompatActivity {
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_service_detail);
-        UiHelper.setupToolbar(this, "Service", true);
+        UiHelper.setupToolbar(this, getString(R.string.title_service_detail), true);
 
         long serviceId = getIntent().getLongExtra("serviceId", 0);
         Service service = new TechFixDao(this).getService(serviceId);
@@ -29,9 +29,9 @@ public class ServiceDetailActivity extends AppCompatActivity {
 
         ((TextView) findViewById(R.id.txtCategory)).setText(service.categoryName);
         ((TextView) findViewById(R.id.txtName)).setText(service.name);
-        ((TextView) findViewById(R.id.txtPrice)).setText(UiHelper.money(service.price));
+        ((TextView) findViewById(R.id.txtPrice)).setText(UiHelper.money(this, service.price));
         ((TextView) findViewById(R.id.txtDescription)).setText(service.description);
-        ((TextView) findViewById(R.id.txtSample)).setText("Sample repaired-device photos: " + service.sampleImageHint);
+        ((TextView) findViewById(R.id.txtSample)).setText(getString(R.string.label_sample_photos, service.sampleImageHint));
 
         MaterialButton book = findViewById(R.id.btnBook);
         book.setOnClickListener(v -> {

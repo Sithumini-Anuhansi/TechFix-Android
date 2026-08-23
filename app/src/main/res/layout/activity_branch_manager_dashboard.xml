@@ -194,7 +194,7 @@
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="Total Revenue"
+                                android:text="Branch Revenue"
                                 android:textColor="@android:color/white"
                                 android:textSize="12sp" />
                         </LinearLayout>
@@ -239,6 +239,34 @@
                 android:columnCount="2">
 
                 <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/btnPendingRequests"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_columnWeight="1"
+                    android:layout_margin="4dp"
+                    android:clickable="true"
+                    android:focusable="true">
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="12dp"
+                        android:gravity="center">
+                        <ImageView
+                            android:layout_width="40dp"
+                            android:layout_height="40dp"
+                            android:src="@drawable/ic_notifications"
+                            app:tint="@color/primary" />
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:text="Pending Repairs"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <com.google.android.material.card.MaterialCardView
                     android:id="@+id/btnManageRepairs"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
@@ -267,7 +295,7 @@
                 </com.google.android.material.card.MaterialCardView>
 
                 <com.google.android.material.card.MaterialCardView
-                    android:id="@+id/btnStaff"
+                    android:id="@+id/btnTechnicians"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_columnWeight="1"
@@ -289,7 +317,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="8dp"
-                            android:text="Manage Staff"
+                            android:text="Technicians"
                             android:textStyle="bold" />
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
@@ -317,13 +345,13 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="8dp"
-                            android:text="Manage Branches"
+                            android:text="Branches"
                             android:textStyle="bold" />
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 
                 <com.google.android.material.card.MaterialCardView
-                    android:id="@+id/btnCategories"
+                    android:id="@+id/btnSpareParts"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_columnWeight="1"
@@ -340,62 +368,6 @@
                             android:layout_width="40dp"
                             android:layout_height="40dp"
                             android:src="@drawable/ic_computer"
-                            app:tint="@color/primary" />
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="8dp"
-                            android:text="Categories"
-                            android:textStyle="bold" />
-                    </LinearLayout>
-                </com.google.android.material.card.MaterialCardView>
-
-                <com.google.android.material.card.MaterialCardView
-                    android:id="@+id/btnServices"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_columnWeight="1"
-                    android:layout_margin="4dp"
-                    android:clickable="true"
-                    android:focusable="true">
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical"
-                        android:padding="12dp"
-                        android:gravity="center">
-                        <ImageView
-                            android:layout_width="40dp"
-                            android:layout_height="40dp"
-                            android:src="@drawable/ic_computer"
-                            app:tint="@color/primary" />
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="8dp"
-                            android:text="Manage Services"
-                            android:textStyle="bold" />
-                    </LinearLayout>
-                </com.google.android.material.card.MaterialCardView>
-
-                <com.google.android.material.card.MaterialCardView
-                    android:id="@+id/btnParts"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_columnWeight="1"
-                    android:layout_margin="4dp"
-                    android:clickable="true"
-                    android:focusable="true">
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical"
-                        android:padding="12dp"
-                        android:gravity="center">
-                        <ImageView
-                            android:layout_width="40dp"
-                            android:layout_height="40dp"
-                            android:src="@drawable/ic_build"
                             app:tint="@color/primary" />
                         <TextView
                             android:layout_width="wrap_content"
@@ -458,6 +430,34 @@
                             android:layout_height="wrap_content"
                             android:layout_marginTop="8dp"
                             android:text="Stock Requests"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/btnManageServices"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_columnWeight="1"
+                    android:layout_margin="4dp"
+                    android:clickable="true"
+                    android:focusable="true">
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="12dp"
+                        android:gravity="center">
+                        <ImageView
+                            android:layout_width="40dp"
+                            android:layout_height="40dp"
+                            android:src="@drawable/ic_computer"
+                            app:tint="@color/primary" />
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:text="Manage Services"
                             android:textStyle="bold" />
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>

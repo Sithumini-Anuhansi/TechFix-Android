@@ -76,6 +76,14 @@
                 android:layout_height="52dp"
                 android:layout_marginTop="24dp"
                 android:text="Create account" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnBackLogin"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="Back to Login" />
         </LinearLayout>
     </ScrollView>
 </LinearLayout>

@@ -5,10 +5,11 @@ public class Payment {
     public long appointmentId;
     public double amount;
     public String method;
-    public int paid;
+    public String status;
     public String paidAt;
     public String customerName;
     public String serviceName;
+    public String branchName;
 
     public Payment() {}
 }

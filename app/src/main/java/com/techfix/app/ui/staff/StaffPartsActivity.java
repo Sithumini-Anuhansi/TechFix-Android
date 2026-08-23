@@ -1,5 +1,6 @@
 package com.techfix.app.ui.staff;
 
+import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.LayoutInflater;
@@ -8,9 +9,9 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.Spinner;
-import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.OptIn;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
@@ -36,15 +37,18 @@ public class StaffPartsActivity extends AppCompatActivity {
     private List<SparePart> allParts = new ArrayList<>();
     private List<Category> categories = new ArrayList<>();
     private List<Branch> branches = new ArrayList<>();
+    private String mode;
 
+    @OptIn(markerClass = com.google.android.material.badge.ExperimentalBadgeUtils.class)
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_list);
-        UiHelper.setupToolbar(this, "Spare parts", true);
+        UiHelper.setupToolbar(this, getString(R.string.title_spare_parts), true);
         
         dao = new TechFixDao(this);
         session = new SessionManager(this);
+        mode = getIntent().getStringExtra("mode");
         categories = dao.getCategories();
         branches = dao.getBranches();
 
@@ -53,7 +57,7 @@ public class StaffPartsActivity extends AppCompatActivity {
         Spinner spinnerFilter = findViewById(R.id.spinnerFilter);
 
         List<String> catNames = new ArrayList<>();
-        catNames.add("All Categories");
+        catNames.add(getString(R.string.all_categories));
         for (Category c : categories) catNames.add(c.name);
         ArrayAdapter<String> spinAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, catNames);
         spinnerFilter.setAdapter(spinAdapter);
@@ -71,17 +75,40 @@ public class StaffPartsActivity extends AppCompatActivity {
 
         adapter = new SimpleAdapter<>((item, image, title, subtitle, meta) -> {
             title.setText(item.name);
-            subtitle.setText(item.branchName + " · " + item.categoryName);
-            meta.setText("Qty: " + item.quantity);
-        }, this::adjustQty);
+            String bName = item.branchId == 0 ? "Global Catalog" : item.branchName;
+            subtitle.setText(getString(R.string.branch_category_sep, bName, item.categoryName));
+            meta.setText(getString(R.string.label_qty, item.quantity));
+
+            // Highlight Global Catalog items with a subtle background color
+            if (item.branchId == 0) {
+                ((View) title.getParent()).setBackgroundColor(androidx.core.content.ContextCompat.getColor(this, R.color.background_light));
+            } else {
+                ((View) title.getParent()).setBackgroundColor(android.graphics.Color.TRANSPARENT);
+            }
+        }, item -> {
+            if ("request".equals(mode)) {
+                showStockRequestDialog(item.name);
+            } else if (session.isAdmin() || session.isManager()) {
+                showOptions(item);
+            } else {
+                adjustQty(item);
+            }
+        });
 
         RecyclerView recycler = findViewById(R.id.recycler);
         recycler.setLayoutManager(new LinearLayoutManager(this));
         recycler.setAdapter(adapter);
         load();
 
-        findViewById(R.id.fabAdd).setVisibility(View.VISIBLE);
-        findViewById(R.id.fabAdd).setOnClickListener(v -> showAddDialog());
+        if ("request".equals(mode)) {
+            findViewById(R.id.fabAdd).setVisibility(View.VISIBLE);
+            findViewById(R.id.fabAdd).setOnClickListener(v -> showStockRequestDialog(null));
+        } else if (session.isAdmin() || session.isManager()) {
+            findViewById(R.id.fabAdd).setVisibility(View.VISIBLE);
+            findViewById(R.id.fabAdd).setOnClickListener(v -> showAddDialog());
+        } else {
+            findViewById(R.id.fabAdd).setVisibility(View.GONE);
+        }
     }
 
     private void filter() {
@@ -92,7 +119,7 @@ public class StaffPartsActivity extends AppCompatActivity {
         List<SparePart> filtered = new ArrayList<>();
         for (SparePart p : allParts) {
             boolean matchesQuery = p.name.toLowerCase().contains(query) || (p.categoryName != null && p.categoryName.toLowerCase().contains(query));
-            boolean matchesCat = cat.equals("All Categories") || (p.categoryName != null && p.categoryName.equals(cat));
+            boolean matchesCat = cat.equals(getString(R.string.all_categories)) || (p.categoryName != null && p.categoryName.equals(cat));
             boolean matchesBranch = preBranch == null || (p.branchName != null && p.branchName.equals(preBranch));
 
             if (matchesQuery && matchesCat && matchesBranch) {
@@ -114,13 +141,23 @@ public class StaffPartsActivity extends AppCompatActivity {
         ArrayAdapter<Branch> bAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, branches);
         branchSpin.setAdapter(bAdapter);
 
+        if (session.isManager()) {
+            for (int i = 0; i < branches.size(); i++) {
+                if (branches.get(i).id == session.getBranchId()) {
+                    branchSpin.setSelection(i);
+                    branchSpin.setEnabled(false);
+                    break;
+                }
+            }
+        }
+
         ArrayAdapter<Category> cAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, categories);
         catSpin.setAdapter(cAdapter);
 
         new AlertDialog.Builder(this)
-                .setTitle("Add Spare Part")
+                .setTitle(R.string.dialog_add_part)
                 .setView(view)
-                .setPositiveButton("Add", (dialog, which) -> {
+                .setPositiveButton(R.string.action_add, (dialog, which) -> {
                     Branch b = (Branch) branchSpin.getSelectedItem();
                     Category c = (Category) catSpin.getSelectedItem();
                     String n = name.getText().toString();
@@ -128,21 +165,25 @@ public class StaffPartsActivity extends AppCompatActivity {
                     if (b != null && c != null && !n.isEmpty() && !qStr.isEmpty()) {
                         dao.addPart(n, Integer.parseInt(qStr), b.id, c.id);
                         load();
-                        Toast.makeText(this, "Part added", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(this, R.string.msg_part_added, Toast.LENGTH_SHORT).show();
                     }
                 })
-                .setNegativeButton("Cancel", null)
+                .setNegativeButton(R.string.action_cancel, null)
                 .show();
     }
 
     private void load() {
         List<SparePart> all = dao.getSpareParts();
         allParts = new ArrayList<>();
-        if ("ADMIN".equals(session.getRole())) {
-            allParts = all;
-        } else {
-            for (SparePart p : all) {
-                if (p.branchId == session.getBranchId()) allParts.add(p);
+        
+        // Include "Global" parts (branch_id=0) so they can be seen/requested
+        for (SparePart p : all) {
+            if (p.branchId == 0) {
+                allParts.add(p);
+            } else if ("ADMIN".equals(session.getRole())) {
+                allParts.add(p);
+            } else if (p.branchId == session.getBranchId()) {
+                allParts.add(p);
             }
         }
         filter();
@@ -153,23 +194,118 @@ public class StaffPartsActivity extends AppCompatActivity {
         input.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
         input.setText(String.valueOf(part.quantity));
         input.setSelection(input.getText().length());
+        input.setPadding(40, 40, 40, 40);
 
         new AlertDialog.Builder(this)
-                .setTitle("Update Quantity: " + part.name)
+                .setTitle(getString(R.string.dialog_update_qty, part.name))
                 .setView(input)
-                .setPositiveButton("Update", (dialog, which) -> {
+                .setPositiveButton(R.string.action_update, (dialog, which) -> {
                     String val = input.getText().toString();
                     if (!val.isEmpty()) {
                         dao.updatePartQuantity(part.id, Integer.parseInt(val));
                         load();
                     }
                 })
-                .setNeutralButton("Delete", (dialog, which) -> {
-                    dao.deletePart(part.id);
-                    load();
-                    Toast.makeText(this, "Part deleted", Toast.LENGTH_SHORT).show();
+                .setNegativeButton(R.string.action_cancel, null)
+                .show();
+    }
+
+    private void showOptions(SparePart part) {
+        if (session.isManager() && part.branchId != session.getBranchId() && part.branchId != 0) {
+            // Manager can only manage parts in their branch or request from global catalog
+            return;
+        }
+
+        new AlertDialog.Builder(this)
+                .setTitle(part.name)
+                .setItems(R.array.part_options, (dialog, which) -> {
+                    if (which == 0) {
+                        showUpdateDialog(part);
+                    } else if (which == 1) {
+                        adjustQty(part);
+                    } else if (which == 2) {
+                        dao.deletePart(part.id);
+                        load();
+                        Toast.makeText(this, R.string.msg_part_deleted, Toast.LENGTH_SHORT).show();
+                    }
                 })
-                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void showUpdateDialog(SparePart part) {
+        View view = LayoutInflater.from(this).inflate(R.layout.dialog_add_part, null);
+        Spinner branchSpin = view.findViewById(R.id.spinnerBranch);
+        Spinner catSpin = view.findViewById(R.id.spinnerCategory);
+        EditText name = view.findViewById(R.id.inputName);
+        EditText qty = view.findViewById(R.id.inputQuantity);
+
+        ArrayAdapter<Branch> bAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, branches);
+        branchSpin.setAdapter(bAdapter);
+
+        ArrayAdapter<Category> cAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, categories);
+        catSpin.setAdapter(cAdapter);
+
+        name.setText(part.name);
+        qty.setText(String.valueOf(part.quantity));
+        
+        for (int i = 0; i < branches.size(); i++) {
+            if (branches.get(i).id == part.branchId) {
+                branchSpin.setSelection(i);
+                if (session.isManager()) branchSpin.setEnabled(false);
+                break;
+            }
+        }
+        for (int i = 0; i < categories.size(); i++) {
+            if (categories.get(i).id == part.categoryId) {
+                catSpin.setSelection(i);
+                break;
+            }
+        }
+
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.dialog_update_part)
+                .setView(view)
+                .setPositiveButton(R.string.action_update, (dialog, which) -> {
+                    Branch b = (Branch) branchSpin.getSelectedItem();
+                    Category c = (Category) catSpin.getSelectedItem();
+                    String n = name.getText().toString();
+                    String qStr = qty.getText().toString();
+                    if (b != null && c != null && !n.isEmpty() && !qStr.isEmpty()) {
+                        dao.updatePart(part.id, n, Integer.parseInt(qStr), b.id, c.id);
+                        load();
+                        Toast.makeText(this, R.string.msg_part_updated, Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .setNegativeButton(R.string.action_cancel, null)
+                .show();
+    }
+
+    private void showStockRequestDialog(String itemName) {
+        View v = getLayoutInflater().inflate(R.layout.dialog_stock_request, null);
+        EditText inputItem = v.findViewById(R.id.inputItem);
+        EditText inputQty = v.findViewById(R.id.inputQty);
+        EditText inputReason = v.findViewById(R.id.inputReason);
+
+        if (itemName != null) {
+            inputItem.setText(itemName);
+            inputQty.requestFocus();
+        }
+
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.dialog_request_stock)
+                .setView(v)
+                .setPositiveButton(R.string.action_submit, (dialog, which) -> {
+                    String item = inputItem.getText().toString().trim();
+                    String qtyStr = inputQty.getText().toString().trim();
+                    String reason = inputReason.getText().toString().trim();
+
+                    if (item.isEmpty() || qtyStr.isEmpty()) return;
+                    int qty = Integer.parseInt(qtyStr);
+                    
+                    dao.addInventoryRequest(session.getUserId(), session.getBranchId(), item, qty, reason);
+                    Toast.makeText(this, R.string.msg_request_submitted, Toast.LENGTH_SHORT).show();
+                })
+                .setNegativeButton(R.string.action_cancel, null)
                 .show();
     }
 }

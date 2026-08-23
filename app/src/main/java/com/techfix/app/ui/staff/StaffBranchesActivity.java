@@ -29,16 +29,7 @@ public class StaffBranchesActivity extends AppCompatActivity {
 
         TechFixDao dao = new TechFixDao(this);
         SessionManager session = new SessionManager(this);
-        List<Branch> all = dao.getBranches();
-        List<Branch> list = new ArrayList<>();
-        
-        if ("ADMIN".equals(session.getRole())) {
-            list = all;
-        } else {
-            for (Branch b : all) {
-                if (b.id == session.getBranchId()) list.add(b);
-            }
-        }
+        List<Branch> list = dao.getBranches();
 
         TextView empty = findViewById(R.id.txtEmpty);
         empty.setVisibility(list.isEmpty() ? View.VISIBLE : View.GONE);
@@ -47,6 +38,12 @@ public class StaffBranchesActivity extends AppCompatActivity {
             title.setText(item.name);
             subtitle.setText(item.address);
             meta.setText(item.phone + " · " + item.latitude + ", " + item.longitude);
+            
+            if (item.id == session.getBranchId()) {
+                ((View)title.getParent().getParent()).setBackgroundResource(R.drawable.bg_card_highlight);
+            } else {
+                ((View)title.getParent().getParent()).setBackgroundResource(android.R.color.transparent);
+            }
         }, item -> {});
         RecyclerView recycler = findViewById(R.id.recycler);
         recycler.setLayoutManager(new LinearLayoutManager(this));

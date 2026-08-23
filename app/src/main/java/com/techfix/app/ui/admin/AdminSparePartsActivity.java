@@ -9,40 +9,38 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.Spinner;
-import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.annotation.Nullable;
 import androidx.annotation.OptIn;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.google.android.material.badge.ExperimentalBadgeUtils;
 import com.techfix.app.R;
 import com.techfix.app.data.TechFixDao;
 import com.techfix.app.model.Category;
-import com.techfix.app.model.Service;
+import com.techfix.app.model.SparePart;
 import com.techfix.app.ui.SimpleAdapter;
 import com.techfix.app.ui.UiHelper;
 
 import java.util.ArrayList;
 import java.util.List;
 
-@OptIn(markerClass = ExperimentalBadgeUtils.class)
-public class AdminServicesActivity extends AppCompatActivity {
+public class AdminSparePartsActivity extends AppCompatActivity {
     private TechFixDao dao;
-    private SimpleAdapter<Service> adapter;
-    private List<Service> allServices = new ArrayList<>();
+    private SimpleAdapter<SparePart> adapter;
+    private List<SparePart> allParts = new ArrayList<>();
     private List<Category> categories = new ArrayList<>();
 
+    @OptIn(markerClass = com.google.android.material.badge.ExperimentalBadgeUtils.class)
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_list);
-        UiHelper.setupToolbar(this, getString(R.string.title_manage_services), true);
-
+        UiHelper.setupToolbar(this, getString(R.string.title_spare_parts), true);
+        
         dao = new TechFixDao(this);
         categories = dao.getCategories();
 
@@ -67,15 +65,15 @@ public class AdminServicesActivity extends AppCompatActivity {
             @Override public void onNothingSelected(AdapterView<?> parent) {}
         });
 
-        RecyclerView recycler = findViewById(R.id.recycler);
-        recycler.setLayoutManager(new LinearLayoutManager(this));
-
         adapter = new SimpleAdapter<>((item, image, title, subtitle, meta) -> {
             title.setText(item.name);
-            subtitle.setText(item.description);
-            meta.setText(UiHelper.money(this, item.price));
+            subtitle.setText(item.categoryName);
+            meta.setVisibility(View.VISIBLE);
+            meta.setText(getString(R.string.label_qty_total, item.quantity));
         }, this::showOptions);
 
+        RecyclerView recycler = findViewById(R.id.recycler);
+        recycler.setLayoutManager(new LinearLayoutManager(this));
         recycler.setAdapter(adapter);
         load();
 
@@ -87,13 +85,13 @@ public class AdminServicesActivity extends AppCompatActivity {
         String query = ((EditText) findViewById(R.id.inputSearch)).getText().toString().toLowerCase();
         String cat = ((Spinner) findViewById(R.id.spinnerFilter)).getSelectedItem().toString();
 
-        List<Service> filtered = new ArrayList<>();
-        for (Service s : allServices) {
-            boolean matchesQuery = s.name.toLowerCase().contains(query) || s.description.toLowerCase().contains(query);
-            boolean matchesCat = cat.equals(getString(R.string.all_categories)) || (s.categoryName != null && s.categoryName.equals(cat));
+        List<SparePart> filtered = new ArrayList<>();
+        for (SparePart p : allParts) {
+            boolean matchesQuery = p.name.toLowerCase().contains(query);
+            boolean matchesCat = cat.equals(getString(R.string.all_categories)) || (p.categoryName != null && p.categoryName.equals(cat));
 
             if (matchesQuery && matchesCat) {
-                filtered.add(s);
+                filtered.add(p);
             }
         }
 
@@ -101,91 +99,82 @@ public class AdminServicesActivity extends AppCompatActivity {
         findViewById(R.id.txtEmpty).setVisibility(filtered.isEmpty() ? View.VISIBLE : View.GONE);
     }
 
+    private void load() {
+        allParts = dao.getGlobalSpareParts();
+        filter();
+    }
+
+    private void showOptions(SparePart part) {
+        new AlertDialog.Builder(this)
+                .setTitle(part.name)
+                .setItems(new String[]{getString(R.string.action_update), getString(R.string.action_delete)}, (dialog, which) -> {
+                    if (which == 0) {
+                        showUpdateDialog(part);
+                    } else if (which == 1) {
+                        dao.deletePart(part.id);
+                        load();
+                        Toast.makeText(this, R.string.msg_part_deleted, Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .show();
+    }
+
     private void showAddDialog() {
-        View view = LayoutInflater.from(this).inflate(R.layout.dialog_add_service, null);
+        View view = LayoutInflater.from(this).inflate(R.layout.dialog_add_part, null);
+        view.findViewById(R.id.spinnerBranch).setVisibility(View.GONE);
+        ((View) view.findViewById(R.id.inputQuantity).getParent()).setVisibility(View.GONE);
+        
         Spinner catSpin = view.findViewById(R.id.spinnerCategory);
         EditText name = view.findViewById(R.id.inputName);
-        EditText price = view.findViewById(R.id.inputPrice);
-        EditText desc = view.findViewById(R.id.inputDescription);
-        EditText hint = view.findViewById(R.id.inputHint);
 
-        ArrayAdapter<Category> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, categories);
-        catSpin.setAdapter(adapter);
+        ArrayAdapter<Category> cAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, categories);
+        catSpin.setAdapter(cAdapter);
 
         new AlertDialog.Builder(this)
-                .setTitle(R.string.dialog_add_service)
+                .setTitle(R.string.dialog_add_part)
                 .setView(view)
                 .setPositiveButton(R.string.action_add, (dialog, which) -> {
                     Category c = (Category) catSpin.getSelectedItem();
                     String n = name.getText().toString();
-                    String pStr = price.getText().toString();
-                    String d = desc.getText().toString();
-                    String h = hint.getText().toString();
-                    if (c != null && !n.isEmpty() && !pStr.isEmpty()) {
-                        dao.addService(c.id, n, Double.parseDouble(pStr), d, h);
+                    if (c != null && !n.isEmpty()) {
+                        dao.addGlobalPart(c.id, n);
                         load();
-                        Toast.makeText(this, R.string.msg_service_added, Toast.LENGTH_SHORT).show();
+                        Toast.makeText(this, R.string.msg_part_added, Toast.LENGTH_SHORT).show();
                     }
                 })
                 .setNegativeButton(R.string.action_cancel, null)
                 .show();
     }
 
-    private void load() {
-        allServices = dao.searchServices("");
-        filter();
-    }
+    private void showUpdateDialog(SparePart part) {
+        View view = LayoutInflater.from(this).inflate(R.layout.dialog_add_part, null);
+        view.findViewById(R.id.spinnerBranch).setVisibility(View.GONE);
+        ((View) view.findViewById(R.id.inputQuantity).getParent()).setVisibility(View.GONE);
 
-    private void showOptions(Service service) {
-        new AlertDialog.Builder(this)
-                .setTitle(service.name)
-                .setItems(new String[]{getString(R.string.action_update), getString(R.string.action_delete)}, (dialog, which) -> {
-                    if (which == 0) {
-                        showUpdateDialog(service);
-                    } else if (which == 1) {
-                        dao.deleteService(service.id);
-                        load();
-                        Toast.makeText(this, R.string.msg_service_deleted, Toast.LENGTH_SHORT).show();
-                    }
-                })
-                .show();
-    }
-
-    private void showUpdateDialog(Service service) {
-        View view = LayoutInflater.from(this).inflate(R.layout.dialog_add_service, null);
         Spinner catSpin = view.findViewById(R.id.spinnerCategory);
         EditText name = view.findViewById(R.id.inputName);
-        EditText price = view.findViewById(R.id.inputPrice);
-        EditText desc = view.findViewById(R.id.inputDescription);
-        EditText hint = view.findViewById(R.id.inputHint);
 
-        name.setText(service.name);
-        price.setText(String.valueOf(service.price));
-        desc.setText(service.description);
-        hint.setText(service.sampleImageHint);
-
-        ArrayAdapter<Category> catAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, categories);
-        catSpin.setAdapter(catAdapter);
+        name.setText(part.name);
+        
+        ArrayAdapter<Category> cAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, categories);
+        catSpin.setAdapter(cAdapter);
         for (int i = 0; i < categories.size(); i++) {
-            if (categories.get(i).id == service.categoryId) {
+            if (categories.get(i).id == part.categoryId) {
                 catSpin.setSelection(i);
                 break;
             }
         }
 
         new AlertDialog.Builder(this)
-                .setTitle(R.string.dialog_update_service)
+                .setTitle(R.string.dialog_update_part)
                 .setView(view)
                 .setPositiveButton(R.string.action_update, (dialog, which) -> {
                     Category c = (Category) catSpin.getSelectedItem();
                     String n = name.getText().toString();
-                    String pStr = price.getText().toString();
-                    String d = desc.getText().toString();
-                    String h = hint.getText().toString();
-                    if (c != null && !n.isEmpty() && !pStr.isEmpty()) {
-                        dao.updateService(service.id, c.id, n, Double.parseDouble(pStr), d, h);
+                    if (c != null && !n.isEmpty()) {
+                        dao.updateGlobalPart(part.id, c.id, n);
                         load();
-                        Toast.makeText(this, R.string.msg_service_updated, Toast.LENGTH_SHORT).show();
+                        Toast.makeText(this, R.string.msg_part_updated, Toast.LENGTH_SHORT).show();
                     }
                 })
                 .setNegativeButton(R.string.action_cancel, null)

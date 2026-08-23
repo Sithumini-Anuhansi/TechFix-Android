@@ -47,10 +47,9 @@ public class BranchAssigner {
         if (chosen == null) {
             chosen = eligible.get(0);
         }
-        Technician tech = dao.getAvailableTechnician(chosen.id);
-        if (tech == null) {
-            return null;
-        }
-        return new Result(chosen, tech, km, gps);
+        
+        // We no longer auto-assign a technician at booking time.
+        // The Branch Manager will assign a technician from the dashboard.
+        return new Result(chosen, null, km, gps);
     }
 }

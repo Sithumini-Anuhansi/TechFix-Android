@@ -64,7 +64,6 @@ public class BranchMapActivity extends AppCompatActivity implements OnMapReadyCa
                 @Override
                 public void onLocation(double lat, double lng) {
                     LatLng me = new LatLng(lat, lng);
-                    map.addMarker(new MarkerOptions().position(me).title("You"));
                     map.animateCamera(CameraUpdateFactory.newLatLngZoom(me, 8.5f));
                 }
 

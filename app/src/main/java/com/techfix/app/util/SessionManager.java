@@ -26,6 +26,7 @@ public class SessionManager {
                 .putString(K_ROLE, user.role)
                 .putString(K_EMAIL, user.email)
                 .putLong(K_BRANCH_ID, user.branchId)
+                .putString("branch_name", user.branchName)
                 .apply();
     }
 
@@ -49,8 +50,20 @@ public class SessionManager {
         return "STAFF".equals(getRole());
     }
 
+    public boolean isManager() {
+        return "MANAGER".equals(getRole()) || "BRANCH_MANAGER".equals(getRole());
+    }
+
+    public boolean isAdmin() {
+        return "ADMIN".equals(getRole());
+    }
+
     public long getBranchId() {
         return prefs.getLong(K_BRANCH_ID, 0);
+    }
+
+    public String getBranchName() {
+        return prefs.getString("branch_name", "");
     }
 
     public void logout() {

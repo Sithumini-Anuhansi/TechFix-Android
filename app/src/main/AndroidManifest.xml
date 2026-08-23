@@ -63,6 +63,7 @@
         <activity android:name=".ui.customer.RepairHistoryActivity" android:exported="false" />
         <activity android:name=".ui.customer.BranchMapActivity" android:exported="false" />
         <activity android:name=".ui.staff.StaffDashboardActivity" android:exported="false" />
+        <activity android:name=".ui.manager.BranchManagerDashboardActivity" android:exported="false" />
         <activity android:name=".ui.staff.StaffAppointmentsActivity" android:exported="false" />
         <activity android:name=".ui.staff.StaffAppointmentDetailActivity" android:exported="false" />
         <activity android:name=".ui.staff.StaffTechniciansActivity" android:exported="false" />
@@ -70,6 +71,7 @@
         <activity android:name=".ui.staff.StaffPaymentsActivity" android:exported="false" />
         <activity android:name=".ui.staff.StaffBranchesActivity" android:exported="false" />
         <activity android:name=".ui.staff.StaffPhotosActivity" android:exported="false" />
+        <activity android:name=".ui.staff.StaffStockRequestsActivity" android:exported="false" />
         <activity android:name=".ui.ProfileActivity" android:exported="false" />
         <activity android:name=".ui.customer.NotificationsActivity" android:exported="false" />
         <activity android:name=".ui.admin.AdminDashboardActivity" android:exported="false" />
@@ -77,6 +79,8 @@
         <activity android:name=".ui.admin.AdminBranchesActivity" android:exported="false" />
         <activity android:name=".ui.admin.AdminServicesActivity" android:exported="false" />
         <activity android:name=".ui.admin.AdminCategoriesActivity" android:exported="false" />
+        <activity android:name=".ui.admin.AdminSparePartsActivity" android:exported="false" />
         <activity android:name=".ui.admin.AdminInventoryRequestsActivity" android:exported="false" />
+        <activity android:name=".ui.admin.AdminPendingRequestsActivity" android:exported="false" />
     </application>
 </manifest>
