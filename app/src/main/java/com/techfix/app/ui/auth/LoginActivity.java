@@ -27,6 +27,20 @@ public class LoginActivity extends AppCompatActivity {
         MaterialButton login = findViewById(R.id.btnLogin);
         MaterialButton register = findViewById(R.id.btnRegister);
 
+        findViewById(R.id.btnForgot).setOnClickListener(v -> {
+            String e = text(email);
+            if (e.isEmpty()) {
+                Toast.makeText(this, "Enter your email first", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            if (new TechFixDao(this).emailExists(e)) {
+                // In a real app, send email. For CW, show a dialog to reset.
+                showResetDialog(e);
+            } else {
+                Toast.makeText(this, "Email not found", Toast.LENGTH_SHORT).show();
+            }
+        });
+
         login.setOnClickListener(v -> {
             String e = text(email);
             String p = text(password);
@@ -40,7 +54,9 @@ public class LoginActivity extends AppCompatActivity {
                 return;
             }
             new SessionManager(this).save(user);
-            if ("STAFF".equals(user.role)) {
+            if ("ADMIN".equals(user.role)) {
+                startActivity(new Intent(this, com.techfix.app.ui.admin.AdminDashboardActivity.class));
+            } else if ("STAFF".equals(user.role)) {
                 startActivity(new Intent(this, StaffDashboardActivity.class));
             } else {
                 startActivity(new Intent(this, CustomerHomeActivity.class));
@@ -49,6 +65,26 @@ public class LoginActivity extends AppCompatActivity {
         });
 
         register.setOnClickListener(v -> startActivity(new Intent(this, RegisterActivity.class)));
+    }
+
+    private void showResetDialog(String email) {
+        android.view.View view = getLayoutInflater().inflate(R.layout.dialog_reset_password, null);
+        TextInputEditText passInput = view.findViewById(R.id.inputNewPassword);
+        new com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+                .setTitle("Reset Password")
+                .setMessage("Enter a new password for " + email)
+                .setView(view)
+                .setPositiveButton("Reset", (d, w) -> {
+                    String newPass = passInput.getText().toString();
+                    if (newPass.length() < 4) {
+                        Toast.makeText(this, "Password too short", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    new TechFixDao(this).updatePassword(email, newPass);
+                    Toast.makeText(this, "Password updated. Please login.", Toast.LENGTH_SHORT).show();
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
     }
 
     private String text(TextInputEditText input) {

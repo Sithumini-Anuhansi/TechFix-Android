@@ -11,6 +11,7 @@ public class SessionManager {
     private static final String K_NAME = "user_name";
     private static final String K_ROLE = "user_role";
     private static final String K_EMAIL = "user_email";
+    private static final String K_BRANCH_ID = "branch_id";
 
     private final SharedPreferences prefs;
 
@@ -24,6 +25,7 @@ public class SessionManager {
                 .putString(K_NAME, user.name)
                 .putString(K_ROLE, user.role)
                 .putString(K_EMAIL, user.email)
+                .putLong(K_BRANCH_ID, user.branchId)
                 .apply();
     }
 
@@ -45,6 +47,10 @@ public class SessionManager {
 
     public boolean isStaff() {
         return "STAFF".equals(getRole());
+    }
+
+    public long getBranchId() {
+        return prefs.getLong(K_BRANCH_ID, 0);
     }
 
     public void logout() {
