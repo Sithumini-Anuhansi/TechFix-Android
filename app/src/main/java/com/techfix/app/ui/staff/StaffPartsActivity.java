@@ -1,7 +1,13 @@
 package com.techfix.app.ui.staff;
 
-import android.os.Bundle;
+import android.text.Editable;
+import android.text.TextWatcher;
+import android.view.LayoutInflater;
 import android.view.View;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
+import android.widget.EditText;
+import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -13,6 +19,8 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.techfix.app.R;
 import com.techfix.app.data.TechFixDao;
+import com.techfix.app.model.Branch;
+import com.techfix.app.model.Category;
 import com.techfix.app.model.SparePart;
 import com.techfix.app.ui.SimpleAdapter;
 import com.techfix.app.ui.UiHelper;
@@ -25,6 +33,9 @@ public class StaffPartsActivity extends AppCompatActivity {
     private TechFixDao dao;
     private SimpleAdapter<SparePart> adapter;
     private SessionManager session;
+    private List<SparePart> allParts = new ArrayList<>();
+    private List<Category> categories = new ArrayList<>();
+    private List<Branch> branches = new ArrayList<>();
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -32,18 +43,31 @@ public class StaffPartsActivity extends AppCompatActivity {
         setContentView(R.layout.activity_list);
         UiHelper.setupToolbar(this, "Spare parts", true);
         
-        android.view.ViewGroup searchLayout = findViewById(R.id.searchLayout);
-        searchLayout.setVisibility(View.VISIBLE);
-        android.widget.EditText searchInput = findViewById(R.id.inputSearch);
-        searchInput.setHint("Search by name or category...");
-        searchInput.addTextChangedListener(new android.text.TextWatcher() {
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-            public void onTextChanged(CharSequence s, int start, int before, int count) { load(); }
-            public void afterTextChanged(android.text.Editable s) {}
-        });
-
         dao = new TechFixDao(this);
         session = new SessionManager(this);
+        categories = dao.getCategories();
+        branches = dao.getBranches();
+
+        findViewById(R.id.filterLayout).setVisibility(View.VISIBLE);
+        EditText inputSearch = findViewById(R.id.inputSearch);
+        Spinner spinnerFilter = findViewById(R.id.spinnerFilter);
+
+        List<String> catNames = new ArrayList<>();
+        catNames.add("All Categories");
+        for (Category c : categories) catNames.add(c.name);
+        ArrayAdapter<String> spinAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, catNames);
+        spinnerFilter.setAdapter(spinAdapter);
+
+        inputSearch.addTextChangedListener(new TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) { filter(); }
+            @Override public void afterTextChanged(Editable s) {}
+        });
+
+        spinnerFilter.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override public void onItemSelected(AdapterView<?> parent, View view, int position, long id) { filter(); }
+            @Override public void onNothingSelected(AdapterView<?> parent) {}
+        });
 
         adapter = new SimpleAdapter<>((item, image, title, subtitle, meta) -> {
             title.setText(item.name);
@@ -60,27 +84,45 @@ public class StaffPartsActivity extends AppCompatActivity {
         findViewById(R.id.fabAdd).setOnClickListener(v -> showAddDialog());
     }
 
-    private void showAddDialog() {
-        View view = getLayoutInflater().inflate(R.layout.dialog_add_part, null);
-        android.widget.Spinner branchSpin = view.findViewById(R.id.spinnerBranch);
-        android.widget.Spinner catSpin = view.findViewById(R.id.spinnerCategory);
-        android.widget.EditText name = view.findViewById(R.id.inputName);
-        android.widget.EditText qty = view.findViewById(R.id.inputQuantity);
+    private void filter() {
+        String query = ((EditText) findViewById(R.id.inputSearch)).getText().toString().toLowerCase();
+        String cat = ((Spinner) findViewById(R.id.spinnerFilter)).getSelectedItem().toString();
+        String preBranch = getIntent().getStringExtra("filter_branch");
 
-        List<com.techfix.app.model.Branch> branches = dao.getBranches();
-        android.widget.ArrayAdapter<com.techfix.app.model.Branch> bAdapter = new android.widget.ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, branches);
+        List<SparePart> filtered = new ArrayList<>();
+        for (SparePart p : allParts) {
+            boolean matchesQuery = p.name.toLowerCase().contains(query) || (p.categoryName != null && p.categoryName.toLowerCase().contains(query));
+            boolean matchesCat = cat.equals("All Categories") || (p.categoryName != null && p.categoryName.equals(cat));
+            boolean matchesBranch = preBranch == null || (p.branchName != null && p.branchName.equals(preBranch));
+
+            if (matchesQuery && matchesCat && matchesBranch) {
+                filtered.add(p);
+            }
+        }
+
+        adapter.submit(filtered);
+        findViewById(R.id.txtEmpty).setVisibility(filtered.isEmpty() ? View.VISIBLE : View.GONE);
+    }
+
+    private void showAddDialog() {
+        View view = LayoutInflater.from(this).inflate(R.layout.dialog_add_part, null);
+        Spinner branchSpin = view.findViewById(R.id.spinnerBranch);
+        Spinner catSpin = view.findViewById(R.id.spinnerCategory);
+        EditText name = view.findViewById(R.id.inputName);
+        EditText qty = view.findViewById(R.id.inputQuantity);
+
+        ArrayAdapter<Branch> bAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, branches);
         branchSpin.setAdapter(bAdapter);
 
-        List<com.techfix.app.model.Category> cats = dao.getCategories();
-        android.widget.ArrayAdapter<com.techfix.app.model.Category> cAdapter = new android.widget.ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, cats);
+        ArrayAdapter<Category> cAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, categories);
         catSpin.setAdapter(cAdapter);
 
         new AlertDialog.Builder(this)
                 .setTitle("Add Spare Part")
                 .setView(view)
                 .setPositiveButton("Add", (dialog, which) -> {
-                    com.techfix.app.model.Branch b = (com.techfix.app.model.Branch) branchSpin.getSelectedItem();
-                    com.techfix.app.model.Category c = (com.techfix.app.model.Category) catSpin.getSelectedItem();
+                    Branch b = (Branch) branchSpin.getSelectedItem();
+                    Category c = (Category) catSpin.getSelectedItem();
                     String n = name.getText().toString();
                     String qStr = qty.getText().toString();
                     if (b != null && c != null && !n.isEmpty() && !qStr.isEmpty()) {
@@ -95,17 +137,15 @@ public class StaffPartsActivity extends AppCompatActivity {
 
     private void load() {
         List<SparePart> all = dao.getSpareParts();
-        List<SparePart> list = new ArrayList<>();
+        allParts = new ArrayList<>();
         if ("ADMIN".equals(session.getRole())) {
-            list = all;
+            allParts = all;
         } else {
             for (SparePart p : all) {
-                if (p.branchId == session.getBranchId()) list.add(p);
+                if (p.branchId == session.getBranchId()) allParts.add(p);
             }
         }
-        adapter.submit(list);
-        TextView empty = findViewById(R.id.txtEmpty);
-        empty.setVisibility(list.isEmpty() ? View.VISIBLE : View.GONE);
+        filter();
     }
 
     private void adjustQty(SparePart part) {

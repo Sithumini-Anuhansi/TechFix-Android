@@ -71,9 +71,10 @@ public class StaffAppointmentDetailActivity extends AppCompatActivity {
         // Setup assignment UI for Admin
         if (isAdmin) {
             findViewById(R.id.layoutAssign).setVisibility(android.view.View.VISIBLE);
-            setupAssignmentUI();
+            findViewById(R.id.layoutStaffActions).setVisibility(android.view.View.GONE);
         } else {
             findViewById(R.id.layoutAssign).setVisibility(android.view.View.GONE);
+            findViewById(R.id.layoutStaffActions).setVisibility(android.view.View.VISIBLE);
         }
 
         bind();
@@ -125,25 +126,22 @@ public class StaffAppointmentDetailActivity extends AppCompatActivity {
         refreshImages();
     }
 
-    private void setupAssignmentUI() {
-        Spinner branchSpin = findViewById(R.id.spinnerBranch);
+    private void setupAssignmentUI(Appointment a) {
         Spinner techSpin = findViewById(R.id.spinnerTech);
 
-        java.util.List<com.techfix.app.model.Branch> branches = dao.getBranches();
-        ArrayAdapter<com.techfix.app.model.Branch> bAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, branches);
-        branchSpin.setAdapter(bAdapter);
-
-        java.util.List<com.techfix.app.model.Technician> techs = dao.getTechnicians(null);
+        // Filter technicians by the branch selected by the customer
+        java.util.List<com.techfix.app.model.Technician> techs = dao.getTechniciansByBranch(a.branchId, null);
         ArrayAdapter<com.techfix.app.model.Technician> tAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, techs);
         techSpin.setAdapter(tAdapter);
 
         findViewById(R.id.btnAssign).setOnClickListener(v -> {
-            com.techfix.app.model.Branch b = (com.techfix.app.model.Branch) branchSpin.getSelectedItem();
             com.techfix.app.model.Technician t = (com.techfix.app.model.Technician) techSpin.getSelectedItem();
-            if (b != null && t != null) {
-                dao.assignAppointment(appointmentId, b.id, t.id);
-                Toast.makeText(this, "Technician assigned", Toast.LENGTH_SHORT).show();
+            if (t != null) {
+                dao.assignAppointment(appointmentId, a.branchId, t.id);
+                Toast.makeText(this, "Technician assigned and notified", Toast.LENGTH_SHORT).show();
                 bind();
+            } else {
+                Toast.makeText(this, "No technician available in this branch", Toast.LENGTH_SHORT).show();
             }
         });
     }
@@ -154,6 +152,12 @@ public class StaffAppointmentDetailActivity extends AppCompatActivity {
             finish();
             return;
         }
+
+        SessionManager session = new SessionManager(this);
+        if ("ADMIN".equals(session.getRole())) {
+            setupAssignmentUI(a);
+        }
+
         Payment pay = dao.getPaymentForAppointment(appointmentId);
         String details = "Customer: " + a.customerName + "\n"
                 + "Service: " + a.serviceName + " (" + UiHelper.money(a.servicePrice) + ")\n"

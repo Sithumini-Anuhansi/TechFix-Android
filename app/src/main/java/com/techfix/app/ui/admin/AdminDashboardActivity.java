@@ -40,7 +40,13 @@ public class AdminDashboardActivity extends AppCompatActivity {
 
         loadStats();
 
-        findViewById(R.id.btnAppointments).setOnClickListener(v ->
+        findViewById(R.id.btnPendingRepairs).setOnClickListener(v -> {
+            Intent intent = new Intent(this, StaffAppointmentsActivity.class);
+            intent.putExtra("filter_status", "PENDING");
+            startActivity(intent);
+        });
+
+        findViewById(R.id.btnManageRepairs).setOnClickListener(v ->
                 startActivity(new Intent(this, StaffAppointmentsActivity.class)));
         
         findViewById(R.id.btnStaff).setOnClickListener(v ->

@@ -1,6 +1,7 @@
 package com.techfix.app.ui.admin;
 
-import android.os.Bundle;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.TextView;
@@ -19,10 +20,13 @@ import com.techfix.app.model.Category;
 import com.techfix.app.ui.SimpleAdapter;
 import com.techfix.app.ui.UiHelper;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class AdminCategoriesActivity extends AppCompatActivity {
     private TechFixDao dao;
+    private SimpleAdapter<Category> adapter;
+    private List<Category> allCategories = new ArrayList<>();
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -31,23 +35,20 @@ public class AdminCategoriesActivity extends AppCompatActivity {
         dao = new TechFixDao(this);
         UiHelper.setupToolbar(this, "Manage Categories", true);
 
-        findViewById(R.id.searchLayout).setVisibility(View.GONE);
+        findViewById(R.id.filterLayout).setVisibility(View.VISIBLE);
+        findViewById(R.id.spinnerFilter).setVisibility(View.GONE);
+        EditText inputSearch = findViewById(R.id.inputSearch);
+
+        inputSearch.addTextChangedListener(new TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) { filter(); }
+            @Override public void afterTextChanged(Editable s) {}
+        });
+
         RecyclerView recycler = findViewById(R.id.recycler);
         recycler.setLayoutManager(new LinearLayoutManager(this));
 
-        FloatingActionButton fab = findViewById(R.id.fabAdd);
-        fab.setVisibility(View.VISIBLE);
-        fab.setOnClickListener(v -> showDialog(null));
-
-        load();
-    }
-
-    private void load() {
-        List<Category> list = dao.getCategories();
-        TextView empty = findViewById(R.id.txtEmpty);
-        empty.setVisibility(list.isEmpty() ? View.VISIBLE : View.GONE);
-
-        SimpleAdapter<Category> adapter = new SimpleAdapter<>((item, image, title, subtitle, meta) -> {
+        adapter = new SimpleAdapter<>((item, image, title, subtitle, meta) -> {
             title.setText(item.name);
             subtitle.setText(item.description);
             meta.setText("ID: " + item.id);
@@ -62,9 +63,30 @@ public class AdminCategoriesActivity extends AppCompatActivity {
                         }
                     }).show();
         });
-        RecyclerView recycler = findViewById(R.id.recycler);
         recycler.setAdapter(adapter);
-        adapter.submit(list);
+
+        FloatingActionButton fab = findViewById(R.id.fabAdd);
+        fab.setVisibility(View.VISIBLE);
+        fab.setOnClickListener(v -> showDialog(null));
+
+        load();
+    }
+
+    private void load() {
+        allCategories = dao.getCategories();
+        filter();
+    }
+
+    private void filter() {
+        String query = ((EditText) findViewById(R.id.inputSearch)).getText().toString().toLowerCase();
+        List<Category> filtered = new ArrayList<>();
+        for (Category c : allCategories) {
+            if (c.name.toLowerCase().contains(query) || c.description.toLowerCase().contains(query)) {
+                filtered.add(c);
+            }
+        }
+        adapter.submit(filtered);
+        findViewById(R.id.txtEmpty).setVisibility(filtered.isEmpty() ? View.VISIBLE : View.GONE);
     }
 
     private void showDialog(Category item) {

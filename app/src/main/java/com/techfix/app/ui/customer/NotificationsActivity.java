@@ -56,7 +56,7 @@ public class NotificationsActivity extends AppCompatActivity {
                     startActivity(intent);
                 } else {
                     Intent intent = new Intent(this, StaffAppointmentDetailActivity.class);
-                    intent.putExtra("appointment_id", item.appointmentId);
+                    intent.putExtra("appointmentId", item.appointmentId);
                     startActivity(intent);
                 }
             } else if (!"CUSTOMER".equals(role)) {
@@ -73,5 +73,6 @@ public class NotificationsActivity extends AppCompatActivity {
         adapter.submit(list);
         
         dao.markNotificationsRead(userId);
+        UiHelper.updateNotificationBadge(this, findViewById(R.id.toolbar));
     }
 }

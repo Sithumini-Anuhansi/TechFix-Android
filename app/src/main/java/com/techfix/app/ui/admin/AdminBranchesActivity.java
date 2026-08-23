@@ -1,5 +1,6 @@
 package com.techfix.app.ui.admin;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -93,10 +94,18 @@ public class AdminBranchesActivity extends AppCompatActivity {
     private void showOptions(Branch branch) {
         new AlertDialog.Builder(this)
                 .setTitle(branch.name)
-                .setItems(new String[]{"Update", "Delete"}, (dialog, which) -> {
+                .setItems(new String[]{"View Staff", "View Spare Parts", "Update", "Delete"}, (dialog, which) -> {
                     if (which == 0) {
-                        showUpdateDialog(branch);
+                        Intent intent = new Intent(this, AdminStaffActivity.class);
+                        intent.putExtra("filter_branch", branch.name);
+                        startActivity(intent);
                     } else if (which == 1) {
+                        Intent intent = new Intent(this, StaffPartsActivity.class);
+                        intent.putExtra("filter_branch", branch.name);
+                        startActivity(intent);
+                    } else if (which == 2) {
+                        showUpdateDialog(branch);
+                    } else if (which == 3) {
                         dao.deleteBranch(branch.id);
                         load();
                         Toast.makeText(this, "Branch deleted", Toast.LENGTH_SHORT).show();
