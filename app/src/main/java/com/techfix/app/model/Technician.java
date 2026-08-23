@@ -9,4 +9,9 @@ public class Technician {
     public String branchName;
 
     public Technician() {}
+
+    @Override
+    public String toString() {
+        return name + (specialty != null && !specialty.isEmpty() ? " - " + specialty : "");
+    }
 }

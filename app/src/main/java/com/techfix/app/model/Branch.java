@@ -10,4 +10,9 @@ public class Branch {
     public String phone;
 
     public Branch() {}
+
+    @Override
+    public String toString() {
+        return name + " (" + city + ")";
+    }
 }

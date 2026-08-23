@@ -10,4 +10,9 @@ public class SparePart {
     public String categoryName;
 
     public SparePart() {}
+
+    @Override
+    public String toString() {
+        return name;
+    }
 }
