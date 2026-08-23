@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="primary">#0D7377</color>
-    <color name="primary_dark">#0A5C5F</color>
-    <color name="accent">#14919B</color>
+    <color name="primary">#003366</color> <!-- Navy Blue from Logo -->
+    <color name="primary_dark">#002244</color>
+    <color name="accent">#F7941D</color> <!-- Orange from Logo -->
+    <color name="secondary">#00A99D</color> <!-- Teal from Logo -->
     <color name="background">#F4F7F7</color>
     <color name="surface">#FFFFFF</color>
     <color name="text_primary">#1A1A1A</color>

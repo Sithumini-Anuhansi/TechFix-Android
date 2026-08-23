@@ -14,7 +14,9 @@ import com.techfix.app.data.TechFixDao;
 import com.techfix.app.model.Branch;
 import com.techfix.app.ui.SimpleAdapter;
 import com.techfix.app.ui.UiHelper;
+import com.techfix.app.util.SessionManager;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class StaffBranchesActivity extends AppCompatActivity {
@@ -25,11 +27,23 @@ public class StaffBranchesActivity extends AppCompatActivity {
         UiHelper.setupToolbar(this, "Branches", true);
         findViewById(R.id.searchLayout).setVisibility(View.GONE);
 
-        List<Branch> list = new TechFixDao(this).getBranches();
+        TechFixDao dao = new TechFixDao(this);
+        SessionManager session = new SessionManager(this);
+        List<Branch> all = dao.getBranches();
+        List<Branch> list = new ArrayList<>();
+        
+        if ("ADMIN".equals(session.getRole())) {
+            list = all;
+        } else {
+            for (Branch b : all) {
+                if (b.id == session.getBranchId()) list.add(b);
+            }
+        }
+
         TextView empty = findViewById(R.id.txtEmpty);
         empty.setVisibility(list.isEmpty() ? View.VISIBLE : View.GONE);
 
-        SimpleAdapter<Branch> adapter = new SimpleAdapter<>((item, title, subtitle, meta) -> {
+        SimpleAdapter<Branch> adapter = new SimpleAdapter<>((item, image, title, subtitle, meta) -> {
             title.setText(item.name);
             subtitle.setText(item.address);
             meta.setText(item.phone + " · " + item.latitude + ", " + item.longitude);

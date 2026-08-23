@@ -70,5 +70,13 @@
         <activity android:name=".ui.staff.StaffPaymentsActivity" android:exported="false" />
         <activity android:name=".ui.staff.StaffBranchesActivity" android:exported="false" />
         <activity android:name=".ui.staff.StaffPhotosActivity" android:exported="false" />
+        <activity android:name=".ui.ProfileActivity" android:exported="false" />
+        <activity android:name=".ui.customer.NotificationsActivity" android:exported="false" />
+        <activity android:name=".ui.admin.AdminDashboardActivity" android:exported="false" />
+        <activity android:name=".ui.admin.AdminStaffActivity" android:exported="false" />
+        <activity android:name=".ui.admin.AdminBranchesActivity" android:exported="false" />
+        <activity android:name=".ui.admin.AdminServicesActivity" android:exported="false" />
+        <activity android:name=".ui.admin.AdminCategoriesActivity" android:exported="false" />
+        <activity android:name=".ui.admin.AdminInventoryRequestsActivity" android:exported="false" />
     </application>
 </manifest>

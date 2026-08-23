@@ -7,7 +7,7 @@ import android.database.sqlite.SQLiteOpenHelper;
 
 public class DatabaseHelper extends SQLiteOpenHelper {
     public static final String DB_NAME = "techfix.db";
-    public static final int DB_VERSION = 1;
+    public static final int DB_VERSION = 4;
 
     public static final String T_USERS = "users";
     public static final String T_BRANCHES = "branches";
@@ -18,6 +18,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     public static final String T_APPOINTMENTS = "appointments";
     public static final String T_IMAGES = "repair_images";
     public static final String T_PAYMENTS = "payments";
+    public static final String T_NOTIFICATIONS = "notifications";
+    public static final String T_INVENTORY_REQUESTS = "inventory_requests";
 
     public DatabaseHelper(Context context) {
         super(context, DB_NAME, null, DB_VERSION);
@@ -25,13 +27,16 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
     @Override
     public void onCreate(SQLiteDatabase db) {
+        // ... existing tables ...
         db.execSQL("CREATE TABLE " + T_USERS + " ("
                 + "id INTEGER PRIMARY KEY AUTOINCREMENT,"
                 + "name TEXT NOT NULL,"
                 + "email TEXT NOT NULL UNIQUE,"
                 + "password TEXT NOT NULL,"
                 + "phone TEXT,"
-                + "role TEXT NOT NULL)");
+                + "role TEXT NOT NULL,"
+                + "branch_id INTEGER,"
+                + "FOREIGN KEY(branch_id) REFERENCES " + T_BRANCHES + "(id))");
 
         db.execSQL("CREATE TABLE " + T_BRANCHES + " ("
                 + "id INTEGER PRIMARY KEY AUTOINCREMENT,"
@@ -103,11 +108,35 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 + "paid_at TEXT,"
                 + "FOREIGN KEY(appointment_id) REFERENCES " + T_APPOINTMENTS + "(id))");
 
+        db.execSQL("CREATE TABLE " + T_NOTIFICATIONS + " ("
+                + "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                + "user_id INTEGER NOT NULL,"
+                + "appointment_id INTEGER,"
+                + "title TEXT,"
+                + "message TEXT,"
+                + "created_at TEXT,"
+                + "is_read INTEGER DEFAULT 0,"
+                + "FOREIGN KEY(user_id) REFERENCES " + T_USERS + "(id))");
+
+        db.execSQL("CREATE TABLE " + T_INVENTORY_REQUESTS + " ("
+                + "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                + "staff_id INTEGER NOT NULL,"
+                + "branch_id INTEGER NOT NULL,"
+                + "item_name TEXT NOT NULL,"
+                + "quantity INTEGER NOT NULL,"
+                + "reason TEXT,"
+                + "status TEXT NOT NULL,"
+                + "created_at TEXT NOT NULL,"
+                + "FOREIGN KEY(staff_id) REFERENCES " + T_USERS + "(id),"
+                + "FOREIGN KEY(branch_id) REFERENCES " + T_BRANCHES + "(id))");
+
         seed(db);
     }
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+        db.execSQL("DROP TABLE IF EXISTS " + T_INVENTORY_REQUESTS);
+        db.execSQL("DROP TABLE IF EXISTS " + T_NOTIFICATIONS);
         db.execSQL("DROP TABLE IF EXISTS " + T_PAYMENTS);
         db.execSQL("DROP TABLE IF EXISTS " + T_IMAGES);
         db.execSQL("DROP TABLE IF EXISTS " + T_APPOINTMENTS);
@@ -121,18 +150,30 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     }
 
     private void seed(SQLiteDatabase db) {
-        insertUser(db, "Demo Customer", "customer@techfix.lk", "customer123", "0771234567", "CUSTOMER");
-        insertUser(db, "TechFix Staff", "staff@techfix.lk", "staff123", "0112345678", "STAFF");
+        insertUser(db, "Sithumini Anuhansi", "admin@techfix.lk", "admin123", "0712345678", "ADMIN", 0);
+        insertUser(db, "John Doe", "john@email.com", "customer123", "0771112233", "CUSTOMER", 0);
+        insertUser(db, "Jane Smith", "jane@email.com", "customer123", "0774445566", "CUSTOMER", 0);
+        insertUser(db, "Demo Customer", "customer@techfix.lk", "customer123", "0771234567", "CUSTOMER", 0);
 
         long colombo = insertBranch(db, "TechFix Colombo", "42 Galle Road, Colombo 03", "Colombo",
                 6.9271, 79.8612, "0112555000");
         long galle = insertBranch(db, "TechFix Galle", "12 Church Street, Galle Fort", "Galle",
                 6.0535, 80.2210, "0912223344");
+        long kandy = insertBranch(db, "TechFix Kandy", "88 Peradeniya Rd, Kandy", "Kandy",
+                7.2906, 80.6337, "0812444555");
+
+        insertUser(db, "Colombo Staff 1", "staff1@techfix.lk", "staff123", "0112000111", "STAFF", colombo);
+        insertUser(db, "Galle Staff 1", "staff2@techfix.lk", "staff123", "0912000222", "STAFF", galle);
+        insertUser(db, "Kandy Staff 1", "staff3@techfix.lk", "staff123", "0812000333", "STAFF", kandy);
+
+        insertUser(db, "Nimal Perera", "nimal@techfix.lk", "staff123", "0112000112", "STAFF", colombo);
+        insertUser(db, "Ishara Fernando", "ishara@techfix.lk", "staff123", "0112000113", "STAFF", colombo);
 
         insertTech(db, "Nimal Perera", colombo, "Mobile screens & batteries", 1);
         insertTech(db, "Ishara Fernando", colombo, "Laptops & motherboards", 1);
         insertTech(db, "Kasun Silva", galle, "Mobile water damage", 1);
         insertTech(db, "Tharushi Jayasuriya", galle, "Desktop & OS install", 1);
+        insertTech(db, "Ravi Kumara", kandy, "Advanced Micro-soldering", 1);
 
         long computers = insertCategory(db, "Computer", "Laptops, desktops and accessories");
         long mobiles = insertCategory(db, "Mobile Phone", "Smartphones and tablets");
@@ -192,13 +233,14 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         db.insert(T_PAYMENTS, null, pay);
     }
 
-    private void insertUser(SQLiteDatabase db, String name, String email, String password, String phone, String role) {
+    private void insertUser(SQLiteDatabase db, String name, String email, String password, String phone, String role, long branchId) {
         ContentValues v = new ContentValues();
         v.put("name", name);
         v.put("email", email);
         v.put("password", password);
         v.put("phone", phone);
         v.put("role", role);
+        v.put("branch_id", branchId);
         db.insert(T_USERS, null, v);
     }
 

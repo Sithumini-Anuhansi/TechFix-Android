@@ -14,6 +14,7 @@ public class Appointment {
     public String technicianName;
     public String serviceName;
     public double servicePrice;
+    public int paid;
 
     public Appointment() {}
 }

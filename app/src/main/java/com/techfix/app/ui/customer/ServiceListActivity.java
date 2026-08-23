@@ -34,10 +34,19 @@ public class ServiceListActivity extends AppCompatActivity {
         dao = new TechFixDao(this);
         empty = findViewById(R.id.txtEmpty);
 
-        adapter = new SimpleAdapter<>((item, title, subtitle, meta) -> {
+        adapter = new SimpleAdapter<>((item, image, title, subtitle, meta) -> {
             title.setText(item.name);
             subtitle.setText(item.categoryName + " — " + item.description);
             meta.setText(UiHelper.money(item.price));
+
+            image.setVisibility(View.VISIBLE);
+            if (item.name.toLowerCase().contains("iphone")) {
+                image.setImageResource(R.drawable.ic_phone);
+            } else if (item.name.toLowerCase().contains("laptop") || item.categoryName.equalsIgnoreCase("Computer")) {
+                image.setImageResource(R.drawable.ic_computer);
+            } else {
+                image.setImageResource(R.drawable.ic_build);
+            }
         }, item -> {
             Intent intent = new Intent(this, ServiceDetailActivity.class);
             intent.putExtra("serviceId", item.id);

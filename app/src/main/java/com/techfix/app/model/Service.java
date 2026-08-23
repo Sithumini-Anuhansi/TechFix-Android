@@ -10,4 +10,9 @@ public class Service {
     public String sampleImageHint;
 
     public Service() {}
+
+    @Override
+    public String toString() {
+        return name;
+    }
 }

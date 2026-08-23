@@ -36,10 +36,10 @@ public class StaffAppointmentsActivity extends AppCompatActivity {
     }
 
     private void load() {
-        List<Appointment> list = new TechFixDao(this).getAllAppointments();
+        List<Appointment> list = new TechFixDao(this).getAllAppointments(null);
         TextView empty = findViewById(R.id.txtEmpty);
         empty.setVisibility(list.isEmpty() ? View.VISIBLE : View.GONE);
-        SimpleAdapter<Appointment> adapter = new SimpleAdapter<>((item, title, subtitle, meta) -> {
+        SimpleAdapter<Appointment> adapter = new SimpleAdapter<>((item, image, title, subtitle, meta) -> {
             title.setText(item.serviceName + " — " + item.customerName);
             subtitle.setText((item.branchName == null ? "Unassigned" : item.branchName) + " · " + item.createdAt);
             meta.setText(item.status);

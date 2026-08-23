@@ -16,11 +16,11 @@ public class CustomerHomeActivity extends AppCompatActivity {
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_customer_home);
-        UiHelper.setupToolbar(this, "TechFix", false);
+        UiHelper.setupToolbar(this, "Dashboard", false);
 
         SessionManager session = new SessionManager(this);
         TextView welcome = findViewById(R.id.txtWelcome);
-        welcome.setText("Hi, " + session.getName());
+        welcome.setText(getString(R.string.hi_user, session.getName(), "Customer"));
 
         findViewById(R.id.cardServices).setOnClickListener(v ->
                 startActivity(new Intent(this, ServiceListActivity.class)));

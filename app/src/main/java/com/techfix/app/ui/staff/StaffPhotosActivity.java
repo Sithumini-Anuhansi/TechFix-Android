@@ -26,12 +26,12 @@ public class StaffPhotosActivity extends AppCompatActivity {
         UiHelper.setupToolbar(this, "Repaired device photos", true);
         findViewById(R.id.searchLayout).setVisibility(View.GONE);
 
-        List<Appointment> list = new TechFixDao(this).getAllAppointments();
+        List<Appointment> list = new TechFixDao(this).getAllAppointments(null);
         TextView empty = findViewById(R.id.txtEmpty);
         empty.setText("Open an appointment to capture photos with the camera");
         empty.setVisibility(View.VISIBLE);
 
-        SimpleAdapter<Appointment> adapter = new SimpleAdapter<>((item, title, subtitle, meta) -> {
+        SimpleAdapter<Appointment> adapter = new SimpleAdapter<>((item, image, title, subtitle, meta) -> {
             title.setText(item.serviceName + " — " + item.customerName);
             subtitle.setText("Tap to open and capture after-repair photos");
             meta.setText(item.status);

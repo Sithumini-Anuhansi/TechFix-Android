@@ -3,6 +3,7 @@ package com.techfix.app.ui;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -15,7 +16,7 @@ import java.util.List;
 
 public class SimpleAdapter<T> extends RecyclerView.Adapter<SimpleAdapter.Holder> {
     public interface Binder<T> {
-        void bind(T item, TextView title, TextView subtitle, TextView meta);
+        void bind(T item, ImageView image, TextView title, TextView subtitle, TextView meta);
     }
 
     public interface Click<T> {
@@ -49,7 +50,7 @@ public class SimpleAdapter<T> extends RecyclerView.Adapter<SimpleAdapter.Holder>
     @Override
     public void onBindViewHolder(@NonNull Holder holder, int position) {
         T item = items.get(position);
-        binder.bind(item, holder.title, holder.subtitle, holder.meta);
+        binder.bind(item, holder.image, holder.title, holder.subtitle, holder.meta);
         holder.itemView.setOnClickListener(v -> {
             if (click != null) {
                 click.onClick(item);
@@ -63,12 +64,14 @@ public class SimpleAdapter<T> extends RecyclerView.Adapter<SimpleAdapter.Holder>
     }
 
     static class Holder extends RecyclerView.ViewHolder {
+        final ImageView image;
         final TextView title;
         final TextView subtitle;
         final TextView meta;
 
         Holder(@NonNull View itemView) {
             super(itemView);
+            image = itemView.findViewById(R.id.imgItem);
             title = itemView.findViewById(R.id.txtTitle);
             subtitle = itemView.findViewById(R.id.txtSubtitle);
             meta = itemView.findViewById(R.id.txtMeta);

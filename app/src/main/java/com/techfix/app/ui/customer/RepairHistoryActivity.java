@@ -33,7 +33,7 @@ public class RepairHistoryActivity extends AppCompatActivity {
         empty.setText("No previous repairs");
         empty.setVisibility(list.isEmpty() ? View.VISIBLE : View.GONE);
 
-        SimpleAdapter<Appointment> adapter = new SimpleAdapter<>((item, title, subtitle, meta) -> {
+        SimpleAdapter<Appointment> adapter = new SimpleAdapter<>((item, image, title, subtitle, meta) -> {
             title.setText(item.serviceName);
             subtitle.setText((item.branchName == null ? "" : item.branchName + " — ") + item.createdAt);
             meta.setText(item.status + " · " + UiHelper.money(item.servicePrice));

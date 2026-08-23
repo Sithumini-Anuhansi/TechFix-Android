@@ -2,7 +2,11 @@
 <resources>
     <string name="app_name">TechFix</string>
     <string name="tagline">Computer &amp; mobile repair, made simple</string>
-    <string name="google_maps_key">YOUR_GOOGLE_MAPS_API_KEY</string>
+    <string name="google_maps_key">AIzaSyDwRv5rMuMInFg4BdEZ1e7PJulB-JCeJrs</string>
+    <string name="home_image_desc">Repair shop home image</string>
+    <string name="forgot_password">Forgot Password?</string>
+    <string name="hi_user">Hi, %1$s (%2$s)</string>
+
     <string-array name="payment_methods">
         <item>CASH</item>
         <item>CARD</item>
