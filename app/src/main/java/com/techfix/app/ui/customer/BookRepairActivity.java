@@ -161,24 +161,21 @@ public class BookRepairActivity extends AppCompatActivity {
 
         BranchAssigner.Result result = BranchAssigner.assign(dao, service.categoryId, lat, lng, manualId);
         if (result == null) {
-            Toast.makeText(this, "Could not assign a branch", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "No branches available for this service", Toast.LENGTH_SHORT).show();
             return;
         }
 
         String created = new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(new Date());
         long customerId = new SessionManager(this).getUserId();
-        long appointmentId = dao.insertAppointment(customerId, result.branch.id, result.technician.id,
-                service.id, note, "ASSIGNED", created);
+        // Set technician to 0 (Unassigned) and status to PENDING
+        long appointmentId = dao.insertAppointment(customerId, result.branch.id, 0,
+                service.id, note, "PENDING", created);
 
         if (photoFile != null && photoFile.exists()) {
             dao.addRepairImage(appointmentId, photoFile.getAbsolutePath(), "Customer device photo");
         }
 
-        String msg = "Assigned to " + result.branch.name + " / " + result.technician.name;
-        if (result.usedGps) {
-            msg += String.format(Locale.US, " (%.1f km)", result.distanceKm);
-        }
-        Toast.makeText(this, msg, Toast.LENGTH_LONG).show();
+        Toast.makeText(this, "Repair request sent to " + result.branch.name + ". Waiting for assignment.", Toast.LENGTH_LONG).show();
         startActivity(new Intent(this, MyAppointmentsActivity.class));
         finish();
     }
