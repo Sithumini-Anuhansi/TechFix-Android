@@ -23,6 +23,51 @@
                 android:layout_height="wrap_content"
                 android:lineSpacingExtra="6dp" />
 
+            <LinearLayout
+                android:id="@+id/layoutAssign"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:text="Assign Technician"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="Branch" />
+
+                <Spinner
+                    android:id="@+id/spinnerBranch"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="Technician" />
+
+                <Spinner
+                    android:id="@+id/spinnerTech"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnAssign"
+                    style="@style/Widget.TechFix.Button"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="Assign Now" />
+            </LinearLayout>
+
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"

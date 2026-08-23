@@ -24,6 +24,7 @@ import com.techfix.app.model.Payment;
 import com.techfix.app.ui.ImageAdapter;
 import com.techfix.app.ui.UiHelper;
 import com.techfix.app.util.ImageHelper;
+import com.techfix.app.util.SessionManager;
 
 import java.io.File;
 import java.io.IOException;
@@ -60,10 +61,24 @@ public class StaffAppointmentDetailActivity extends AppCompatActivity {
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_staff_appointment_detail);
-        UiHelper.setupToolbar(this, "Handle repair", true);
+        UiHelper.setupToolbar(this, "Repair Details", true);
         dao = new TechFixDao(this);
         appointmentId = getIntent().getLongExtra("appointmentId", 0);
+
+        SessionManager session = new SessionManager(this);
+        boolean isAdmin = "ADMIN".equals(session.getRole());
+
+        // Setup assignment UI for Admin
+        if (isAdmin) {
+            findViewById(R.id.layoutAssign).setVisibility(android.view.View.VISIBLE);
+            setupAssignmentUI();
+        } else {
+            findViewById(R.id.layoutAssign).setVisibility(android.view.View.GONE);
+        }
+
         bind();
+
+        // ... rest of onCreate ...
 
         Spinner status = findViewById(R.id.spinnerStatus);
         ArrayAdapter<CharSequence> statusAdapter = ArrayAdapter.createFromResource(this,
@@ -108,6 +123,29 @@ public class StaffAppointmentDetailActivity extends AppCompatActivity {
         recycler.setLayoutManager(new LinearLayoutManager(this));
         recycler.setAdapter(imageAdapter);
         refreshImages();
+    }
+
+    private void setupAssignmentUI() {
+        Spinner branchSpin = findViewById(R.id.spinnerBranch);
+        Spinner techSpin = findViewById(R.id.spinnerTech);
+
+        java.util.List<com.techfix.app.model.Branch> branches = dao.getBranches();
+        ArrayAdapter<com.techfix.app.model.Branch> bAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, branches);
+        branchSpin.setAdapter(bAdapter);
+
+        java.util.List<com.techfix.app.model.Technician> techs = dao.getTechnicians(null);
+        ArrayAdapter<com.techfix.app.model.Technician> tAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, techs);
+        techSpin.setAdapter(tAdapter);
+
+        findViewById(R.id.btnAssign).setOnClickListener(v -> {
+            com.techfix.app.model.Branch b = (com.techfix.app.model.Branch) branchSpin.getSelectedItem();
+            com.techfix.app.model.Technician t = (com.techfix.app.model.Technician) techSpin.getSelectedItem();
+            if (b != null && t != null) {
+                dao.assignAppointment(appointmentId, b.id, t.id);
+                Toast.makeText(this, "Technician assigned", Toast.LENGTH_SHORT).show();
+                bind();
+            }
+        });
     }
 
     private void bind() {
