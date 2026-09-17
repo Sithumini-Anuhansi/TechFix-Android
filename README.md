@@ -12,16 +12,6 @@ GitHub: https://github.com/Sithumini-Anuhansi/TechFix-Android
 
 Demo Video: https://drive.google.com/file/d/1KQxS2-IwemlbO3pVl6_1TCKI7OUYGrzC/view?usp=drive_link
 
-## Team Responsibility
-Each member in the team was responsible for handling at a UI in the application.
-
-| Member                                | Responsible Module / UI |
-|---------------------------------------| --- |
-| **Member 1:**<br/>Sithumini Anuhansi  | **Customer Module** (Home, Booking, History, Interactive Maps) |
-| **Member 2:**<br/>Pabasara Ranasinghe | **Admin Module** (Staff, Branch, Service, and User Management) |
-| **Member 3:**<br/>Binusha Fernando    | **Branch Manager Module** (Branch Dashboard, Inventory Stock Requests) |
-| **Member 4:**<br/>Sadeepa Gunarathna  | **Staff/Technician Module** (Repair Tasks, Status Updates, Payment Handling) |
-
 ## Features
 
 ### 🛡️ Admin (System Owner)
